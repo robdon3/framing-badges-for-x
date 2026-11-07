@@ -22,7 +22,7 @@ The same folder is zipped at `dist/x-framing-badges.zip` (files at the archive r
 
 ## Tone check on a Mac (optional)
 
-The tone chip sits beside a framing badge, or on its own when no framing rule fired. You choose the tone names. The first list is whining, fun, sad, angry, hype, sarcastic, informative, and neutral. Neutral always stays, and it cannot be hidden. The model is Apple's on-device Foundation Model, reached through Chrome native messaging. Post text is not written to disk and is not sent to a server. The framing badge is still the rules engine above.
+The tone chip sits beside a framing badge, or on its own when no framing rule fired. You choose the tone names. The first list is whining, fun, sad, angry, hype, sarcastic, informative, and neutral. Neutral is an ordinary tone: you can remove it or hide it. The model is Apple's on-device Foundation Model, reached through Chrome native messaging. Post text is not written to disk and is not sent to a server. The framing badge is still the rules engine above.
 
 This needs a Mac where Apple Intelligence is already available (checked on macOS 27 with the command-line tools, not the Xcode app). The helper does not build on Linux.
 
@@ -48,7 +48,7 @@ Then:
 2. Open the toolbar popup or the options page.
 3. Turn on **Tone check (on-device Apple model)**. It is off by default.
 4. Scroll `https://x.com` or `https://pro.x.com`. A post that stays in the viewport for about half a second gets a tone chip. If a framing rule also fired, the chip sits beside that badge. On X Pro, each column is watched on its own. A label from this page load can show again without asking the model. Reload the page and the labels are gone.
-5. In the popup, under **Tones**, type a name and press Add (Enter works too). A name can be letters, digits, spaces, hyphens, and apostrophes, up to 24 characters. You can keep 12 tones plus neutral. Check Hide to collapse those posts to a thin bar, `Hidden: <tone>`, with a **Show** button that reveals that one post until you refresh. Unchecking a tone brings those posts back immediately. Neutral cannot be removed or hidden. **Reset to defaults** restores the original eight. The popup says `Hidden this page: N`. Changing the list forgets labels from the old list and scores the posts that are on screen again.
+5. In the popup, under **Tones**, type a name and press Add (Enter works too). A name can be letters, digits, spaces, hyphens, and apostrophes, up to 24 characters. Keep at least one tone and at most 12. Check Hide to collapse those posts to a thin bar, `Hidden: <tone>`, with a **Show** button that reveals that one post until you refresh. Unchecking a tone brings those posts back immediately. **Reset to defaults** restores the original eight, including neutral. The popup says `Hidden this page: N`. Adding, removing, or replacing a tone updates the page immediately: old labels are forgotten, chips and bars from the old list come off, and posts on screen are scored again with the new list. A reply from the previous list is ignored. If the model does not return one of the current names, the post stays unlabeled: no chip and no hide.
 
 If the helper is missing or the model is unavailable, no tone chip is shown. The popup status line says `Tone host not installed`, or the reason the on-device model is unavailable.
 
@@ -113,7 +113,7 @@ Standards mapping, in short: this build never assigns “verified.” Claim is t
 A post is untrusted text. The tone check treats it as data, not as instructions.
 
 - The helper's instructions stay fixed and separate from the post. The post is wrapped between `[[POST]]` and `[[/POST]]`, after control characters, zero-width characters, bidi overrides, and those delimiter marks are stripped. The text is capped at about 1000 characters.
-- Each request sends `{id, text, labels}`. `labels` is the current tone list, including neutral. The host checks those names again and uses them as the only allowed answers. Anything else becomes neutral. The extension checks the reply against the list that is current when the reply arrives. A reply whose id does not match the request is ignored.
+- Each request sends `{id, text, labels}`. `labels` is the tone list at the moment of the send, one to twelve names, with no extra fallback added. The host checks those names again and uses them as the only allowed answers. The reply is `{id, label, ms}` or `{id, error}`. `label` is one of that request's names, or `null` when the model misses. The extension ignores a reply if the list changed while it was in flight, and a null or unknown label draws no chip and is not hidden.
 - Each request starts a new Foundation Models session, so one post's text is not left in the next post's transcript.
 - Frames larger than 64KB are rejected without being read. Malformed JSON gets a generic error and is not sent to the model.
 - The native host manifest allows only this extension's id, `chrome-extension://eadkmedlbenoalongikmdhedfinggpoh/`.

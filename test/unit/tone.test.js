@@ -16,6 +16,7 @@ import { createToneMemory, TONE_MEMORY_CAP } from '../../extension/tone/memory.j
 import { DEFAULT_TONE_LABELS, explainToneRejection, frameToneRequest, hashToneList, normalizeToneLabel, normalizeToneList, parseHostMessage, sanitizeToneText, truncateToneText } from '../../extension/tone/protocol.js';
 import { createJobQueue } from '../../extension/tone/queue.js';
 import { requestToneLabel } from '../../extension/tone/request.js';
+import { buildToneRelay } from '../../extension/tone/relay.js';
 import { createToneSession } from '../../extension/tone/session.js';
 import { createToneController, createVisibleQueue, TONE_QUEUE_CAP } from '../../extension/tone/viewport.js';
 import { watchVisiblePost } from '../../extension/tone/watch.js';
@@ -67,7 +68,7 @@ describe('tone', { concurrency: 1 }, () => {
   it('derives the stable unpacked extension id from the manifest key', () => {
     const manifest = JSON.parse(readFileSync(path.join(root, 'extension/manifest.json'), 'utf8'));
     assert.equal(extensionIdFromKey(manifest.key), EXPECTED_EXTENSION_ID);
-    assert.equal(manifest.version, '1.4.0');
+    assert.equal(manifest.version, '1.4.1');
   });
 
   it('frames native messages as a little-endian length plus JSON', () => {
@@ -109,7 +110,8 @@ describe('tone', { concurrency: 1 }, () => {
     assert.equal(failure.error, 'Apple on-device model is unavailable: Apple Intelligence is turned off.');
     assert.equal('label' in failure, false);
     assert.equal(JSON.stringify(failure).includes('should not leak'), false);
-    assert.equal(parseHostMessage({ id: '9', label: 'Opinion' }).label, 'neutral');
+    assert.equal(parseHostMessage({ id: '9', label: 'Opinion' }).label, null);
+    assert.equal(parseHostMessage({ id: '9', label: null, ms: 4 }).label, null);
     assert.equal(JSON.stringify(parseHostMessage({ id: '9', label: 'Opinion' })).includes('Opinion'), false);
   });
 
@@ -522,7 +524,7 @@ describe('tone', { concurrency: 1 }, () => {
     assert.equal(normalizeToneLabel('HACKED'), null);
 
     const badLabel = parseHostMessage({ id: '42', label: injection, text: injection });
-    assert.equal(badLabel.label, 'neutral');
+    assert.equal(badLabel.label, null);
     assert.equal(JSON.stringify(badLabel).includes('HACKED'), false);
     assert.equal(JSON.stringify(badLabel).includes('Ignore previous'), false);
     const badError = parseHostMessage({ id: '42', error: injection, text: injection });
@@ -571,7 +573,7 @@ describe('tone', { concurrency: 1 }, () => {
     port.emit({ id: '42', label: 'HACKED', text: injection });
     const reply = await pending;
     assert.equal(reply.id, '42');
-    assert.equal(reply.label, 'neutral');
+    assert.equal(reply.label, null);
     assert.equal(reply.error, undefined);
     assert.equal(JSON.stringify(reply).includes('HACKED'), false);
     assert.equal(JSON.stringify(reply).includes('Ignore previous'), false);
@@ -589,20 +591,21 @@ describe('tone', { concurrency: 1 }, () => {
 
   it('validates a custom tone list and drops a model answer outside it', () => {
     const custom = ['hopeful', 'dry humor', 'neutral'];
-    assert.deepEqual(normalizeToneList([' Hopeful ', 'dry  humor', 'hopeful', '<b>', 'no\u0001pe']), ['hopeful', 'dry humor', 'neutral']);
+    assert.deepEqual(normalizeToneList(['hopeful']), ['hopeful']);
+    assert.deepEqual(normalizeToneList([' Hopeful ', 'dry  humor', 'hopeful', '<b>', 'no\u0001pe']), ['hopeful', 'dry humor']);
     assert.equal(explainToneRejection('<script>', custom).length > 0, true);
     assert.equal(explainToneRejection('a'.repeat(25), custom), 'Use 24 characters or fewer.');
     assert.equal(explainToneRejection('fun\u0007', custom).includes('letters'), true);
     const full = normalizeToneList(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm']);
-    assert.equal(full.length, 13);
+    assert.equal(full.length, 12);
     assert.equal(full.includes('m'), false);
-    assert.equal(full.at(-1), 'neutral');
-    assert.equal(explainToneRejection('extra', full), 'You can add 12 tones plus neutral.');
+    assert.equal(full.includes('neutral'), false);
+    assert.equal(explainToneRejection('extra', full), 'You can add 12 tones.');
     const request = frameToneRequest('7', 'hello', ['Hopeful', '<bad>', 'dry humor']);
-    assert.deepEqual(request.labels, ['hopeful', 'dry humor', 'neutral']);
+    assert.deepEqual(request.labels, ['hopeful', 'dry humor']);
     assert.equal(request.text, 'hello');
     const outside = parseHostMessage({ id: '7', label: 'HACKED', text: 'hello' }, request.labels);
-    assert.equal(outside.label, 'neutral');
+    assert.equal(outside.label, null);
     assert.equal(JSON.stringify(outside).includes('HACKED'), false);
     assert.equal(parseHostMessage({ id: '7', label: 'dry humor' }, request.labels).label, 'dry humor');
     assert.equal(hashToneList(['hopeful', 'neutral']) !== hashToneList(DEFAULT_TONE_LABELS), true);
@@ -616,5 +619,37 @@ describe('tone', { concurrency: 1 }, () => {
     assert.equal(memory.set('1', 'hype'), false);
     assert.equal(memory.set('1', 'hopeful'), true);
     assert.equal(memory.get('1'), 'hopeful');
+    assert.equal(memory.markUnlabeled('9'), true);
+    assert.equal(memory.has('9'), true);
+    assert.equal(memory.get('9'), null);
+    assert.equal(memory.set('9', 'not-on-the-list'), false);
+  });
+
+  it('relays each request with that request\'s labels and does not keep a list', async () => {
+    const worker = readFileSync(path.join(root, 'extension/background/service-worker.js'), 'utf8');
+    assert.match(worker, /buildToneRelay\(message\)/);
+    assert.equal(/\b(?:let|const|var)\s+toneLabels\b/.test(worker), false);
+    const custom = ['political', 'doomer', 'wholesome'];
+    const firstMessage = { id: '1', text: 'hello', labels: custom };
+    const first = buildToneRelay(firstMessage);
+    assert.equal(firstMessage.text, '');
+    const second = buildToneRelay({ id: '2', text: 'again', labels: ['calm'] });
+    assert.deepEqual(first.labels, custom);
+    assert.deepEqual(second.labels, ['calm']);
+    assert.equal(first.labels.includes('neutral'), false);
+    const port = fakePort();
+    const session = createToneSession({ connect: () => port, timeoutMs: 200 });
+    const pending = session.classify(first);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.deepEqual(port.sent[0].labels, custom);
+    assert.equal(port.sent[0].text, 'hello');
+    port.emit({ id: '1', label: 'doomer', ms: 4 });
+    assert.equal((await pending).label, 'doomer');
+    const other = session.classify(second);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.deepEqual(port.sent.at(-1).labels, ['calm']);
+    port.emit({ id: '2', label: 'nope', ms: 1 });
+    assert.equal((await other).label, null);
+    session.close();
   });
 });

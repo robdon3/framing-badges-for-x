@@ -21,7 +21,7 @@ describe('constraints', () => {
   it('locks the manifest to storage and x.com', () => {
     const manifest = JSON.parse(readFileSync(path.join(extensionDir, 'manifest.json'), 'utf8'));
     assert.equal(manifest.manifest_version, 3);
-    assert.equal(manifest.version, '1.4.0');
+    assert.equal(manifest.version, '1.4.1');
     assert.equal(typeof manifest.key, 'string');
     assert.ok(manifest.key.length > 100);
     assert.deepEqual(manifest.permissions, ['storage', 'nativeMessaging']);

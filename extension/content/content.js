@@ -8,7 +8,7 @@ import { createChromeStorage, createMemoryStorage, hasChromeStorage, normalizeSt
 import { syncPostCollapse } from '../tone/filter.js';
 import { hiddenCountMessage } from '../tone/filter-ui.js';
 import { createToneMemory } from '../tone/memory.js';
-import { TONE_MESSAGE_TYPE, TONE_PAGE_PORT, normalizeToneLabel } from '../tone/protocol.js';
+import { TONE_MESSAGE_TYPE, TONE_PAGE_PORT, hashToneList, normalizeToneLabel } from '../tone/protocol.js';
 import { requestToneLabel } from '../tone/request.js';
 import { createToneController } from '../tone/viewport.js';
 
@@ -86,11 +86,14 @@ async function start(doc, options) {
       return () => observer.disconnect();
     },
     send(entry) {
+      const labels = state.toneLabels;
       return requestToneLabel({
         id: entry.id,
         text: entry.text,
-        labels: state.toneLabels,
+        labels,
+        listHash: hashToneList(labels),
         currentLabels: () => state.toneLabels,
+        currentHash: () => hashToneList(state.toneLabels),
         send: toneSender,
       });
     },
@@ -147,11 +150,15 @@ async function start(doc, options) {
 
   function removeToneChips() {
     for (const chip of doc.querySelectorAll('.fcb-tone')) chip.remove();
+    for (const bar of doc.querySelectorAll('.fcb-hidden-bar')) bar.remove();
     for (const host of doc.querySelectorAll('.fcb-host')) {
       if (host.dataset) delete host.dataset.fcbTone;
     }
     for (const post of findPosts(doc.body || doc)) {
-      if (post.dataset) delete post.dataset.fcbToneLive;
+      if (post.dataset) {
+        delete post.dataset.fcbToneLive;
+        delete post.dataset.fcbCollapsed;
+      }
     }
   }
 

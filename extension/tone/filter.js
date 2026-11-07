@@ -1,4 +1,4 @@
-import { FALLBACK_TONE, normalizeToneList, normalizeToneName, toneDisplayName } from './protocol.js';
+import { normalizeToneList, normalizeToneName, toneDisplayName } from './protocol.js';
 
 function ensurePositioned(article) {
   const inline = article.style?.position;
@@ -14,9 +14,9 @@ function ensurePositioned(article) {
   article.style.position = 'relative';
 }
 
-/** Saved hide-list. Only tone names from the current list, never neutral, never post text. */
+/** Saved hide-list. Only tone names from the current list. Never post text. */
 export function normalizeHiddenTones(raw, labels) {
-  const allowed = normalizeToneList(labels).filter((name) => name !== FALLBACK_TONE);
+  const allowed = normalizeToneList(labels);
   const selected = new Set();
   const values = Array.isArray(raw) ? raw : [];
   for (const value of values) {
@@ -28,7 +28,7 @@ export function normalizeHiddenTones(raw, labels) {
 
 export function shouldCollapsePost({ label, hiddenTones, revealed, postId, labels } = {}) {
   const normalized = normalizeToneName(label);
-  if (!normalized || normalized === FALLBACK_TONE) return false;
+  if (!normalized) return false;
   if (revealed?.has(String(postId || ''))) return false;
   return normalizeHiddenTones(hiddenTones, labels).includes(normalized);
 }

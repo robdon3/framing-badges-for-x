@@ -10,9 +10,9 @@ import {
   TONE_MISSING_STATUS,
   TONE_OFF_STATUS,
   TONE_PAGE_PORT,
-  frameToneRequest,
   statusForHostError,
 } from '../tone/protocol.js';
+import { buildToneRelay } from '../tone/relay.js';
 import { DEFAULT_STATE, normalizeState } from '../storage/state.js';
 
 // One native port (com.xframingbadges.tone), opened on the first request and closed when idle.
@@ -117,8 +117,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type !== TONE_MESSAGE_TYPE) return false;
   if (sender?.id !== chrome.runtime.id) return false;
-  const request = frameToneRequest(message.id, message.text, message.labels);
-  if (message && typeof message === 'object') message.text = '';
+  const request = buildToneRelay(message);
   lifetime.request(request).then(async (result) => {
     if (result.error && result.error !== TONE_OFF_STATUS.message) {
       await publish(statusForHostError(result.error)).catch(() => {});

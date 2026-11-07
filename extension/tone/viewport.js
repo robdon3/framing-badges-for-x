@@ -87,8 +87,12 @@ export function createToneController({
         } finally {
           payload.text = '';
         }
-        if (result?.label && memory.set(payload.id, result.label)) {
+        if (result?.stale || result?.ignored) {
+          /* An old list, or a reply for a different id, must not be cached or painted. */
+        } else if (result?.label && memory.set(payload.id, result.label)) {
           if (!paused) paint?.(payload.id, result.label);
+        } else if (payload.id && !paused) {
+          memory.markUnlabeled?.(payload.id);
         }
         if (paused) break;
       }
@@ -113,9 +117,9 @@ export function createToneController({
         if (!el) return;
         const snap = readPost(el);
         if (!snap?.id || !snap.text) return;
-        const known = memory.get(snap.id);
-        if (known) {
-          paint?.(snap.id, known);
+        if (memory.has?.(snap.id)) {
+          const known = memory.get(snap.id);
+          if (known) paint?.(snap.id, known);
           return;
         }
         queue.add({ id: String(snap.id), text: snap.text });
@@ -144,9 +148,9 @@ export function createToneController({
       }
       const snap = readPost(element);
       if (snap?.id) {
-        const known = memory.get(snap.id);
-        if (known) {
-          paint?.(snap.id, known);
+        if (memory.has?.(snap.id)) {
+          const known = memory.get(snap.id);
+          if (known) paint?.(snap.id, known);
           return;
         }
       }

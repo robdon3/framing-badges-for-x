@@ -1,11 +1,13 @@
-import { FALLBACK_TONE, hashToneList, normalizeToneList, normalizeToneName } from './protocol.js';
+import { hashToneList, normalizeToneList, normalizeToneName } from './protocol.js';
 
 /** In-page labels only. A refresh drops the map. Nothing here is written to disk. */
 export const TONE_MEMORY_CAP = 300;
 
+const UNLABELED = Symbol('unlabeled');
+
 /**
  * Labels for one tone list. The key is the post id plus the list hash.
- * A different list clears the previous labels.
+ * A different list clears the previous labels. An unlabeled marker is not a tone.
  */
 export function createToneMemory(cap = TONE_MEMORY_CAP) {
   const limit = Math.max(1, cap);
@@ -41,19 +43,27 @@ export function createToneMemory(cap = TONE_MEMORY_CAP) {
     get hash() {
       return listHash;
     },
+    has(id) {
+      return labels.has(storageKey(String(id || '')));
+    },
     get(id) {
       const key = storageKey(String(id || ''));
       if (!labels.has(key)) return null;
       const label = labels.get(key);
       touch(String(id || ''), label);
-      return label;
+      return label === UNLABELED ? null : label;
     },
     set(id, label) {
       const key = String(id || '');
       const name = normalizeToneName(label);
-      if (!key || !name || name === '' || !allowed.has(name)) return false;
-      if (name !== FALLBACK_TONE && !allowed.has(name)) return false;
+      if (!key || !name || !allowed.has(name)) return false;
       touch(key, name);
+      return true;
+    },
+    markUnlabeled(id) {
+      const key = String(id || '');
+      if (!key) return false;
+      touch(key, UNLABELED);
       return true;
     },
     clear() {

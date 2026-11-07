@@ -337,15 +337,15 @@ describe('tone filter', () => {
     const container = document.querySelector('#root');
     bindHiddenTones({ container, chromeApi });
     await new Promise((resolve) => setImmediate(resolve));
-    assert.equal(container.querySelector('input[value="neutral"]').disabled, true);
-    assert.equal(container.querySelector('[aria-label="Remove neutral"]'), null);
+    assert.equal(container.querySelector('input[value="neutral"]').disabled, false);
+    assert.equal(container.querySelector('[aria-label="Remove neutral"]').textContent, 'x');
     const form = container.querySelector('form');
     const field = container.querySelector('input[aria-label="New tone"]');
     const error = container.querySelector('.tone-error');
     field.value = 'Hopeful';
     form.dispatchEvent(new document.defaultView.Event('submit', { bubbles: true, cancelable: true }));
     await new Promise((resolve) => setImmediate(resolve));
-    assert.deepEqual(stored.toneLabels, [...DEFAULT_TONE_LABELS.slice(0, -1), 'hopeful', 'neutral']);
+    assert.deepEqual(stored.toneLabels, [...DEFAULT_TONE_LABELS, 'hopeful']);
     assert.equal(container.querySelector('input[value="hopeful"]') != null, true);
     assert.equal(container.querySelector('[aria-label="Remove hopeful"]').textContent, 'x');
     assert.equal(error.textContent, '');
@@ -369,6 +369,13 @@ describe('tone filter', () => {
     await new Promise((resolve) => setImmediate(resolve));
     assert.deepEqual(stored.toneLabels, [...DEFAULT_TONE_LABELS]);
     assert.equal(JSON.stringify(stored).includes('<b>'), false);
+
+    stored = { toneLabels: ['doomer'] };
+    bindHiddenTones({ container, chromeApi });
+    await new Promise((resolve) => setImmediate(resolve));
+    container.querySelector('[aria-label="Remove doomer"]').click();
+    assert.equal(container.querySelector('.tone-error').textContent, 'Keep at least one tone.');
+    assert.deepEqual(stored.toneLabels, ['doomer']);
   });
 
   it('forgets a cached label and rescores the visible post when the tone list changes', async () => {
@@ -396,7 +403,7 @@ describe('tone filter', () => {
     await new Promise((resolve) => setTimeout(resolve, 40));
     assert.equal(document.querySelector('.fcb-tone').textContent, 'Fun');
     assert.equal(sent.length, 1);
-    await storage.set({ toneLabels: ['hopeful', 'neutral'] });
+    await storage.set({ toneLabels: ['hopeful'] });
     await new Promise((resolve) => setTimeout(resolve, 40));
     assert.equal(sent.length, 2);
     assert.equal(sent[1].includes('hopeful'), true);

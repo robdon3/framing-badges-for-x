@@ -2,8 +2,8 @@ import { DEFAULT_STATE } from '../storage/state.js';
 import { normalizeHiddenTones } from './filter.js';
 import {
   DEFAULT_TONE_LABELS,
-  FALLBACK_TONE,
   explainToneRejection,
+  explainToneRemoval,
   normalizeToneList,
   normalizeToneName,
   toneDisplayName,
@@ -77,33 +77,32 @@ export function bindHiddenTones({ container, chromeApi = globalThis.chrome } = {
       input.value = name;
       const text = doc.createElement('span');
       text.textContent = toneDisplayName(name) || name;
+      input.checked = hiddenSet.has(name);
       label.append(input, text);
-      row.append(label);
-      if (name === FALLBACK_TONE) {
-        input.disabled = true;
-        input.checked = false;
-        input.title = 'Neutral is the fallback and stays visible.';
-      } else {
-        input.checked = hiddenSet.has(name);
-        const remove = doc.createElement('button');
-        remove.type = 'button';
-        remove.className = 'tone-remove';
-        remove.textContent = 'x';
-        remove.setAttribute('aria-label', `Remove ${name}`);
-        remove.addEventListener('click', () => {
-          labels = labels.filter((item) => item !== name);
-          hidden = hidden.filter((item) => item !== name);
-          error.textContent = '';
-          save(labels, hidden);
-          render();
-        });
-        row.append(remove);
-      }
+      const remove = doc.createElement('button');
+      remove.type = 'button';
+      remove.className = 'tone-remove';
+      remove.textContent = 'x';
+      remove.setAttribute('aria-label', `Remove ${name}`);
+      remove.addEventListener('click', () => {
+        const reason = explainToneRemoval(labels);
+        if (labels.length <= 1 || reason) {
+          error.textContent = reason || 'Keep at least one tone.';
+          return;
+        }
+        labels = labels.filter((item) => item !== name);
+        hidden = hidden.filter((item) => item !== name);
+        error.textContent = '';
+        save(labels, hidden);
+        render();
+      });
+      row.append(label, remove);
       input.addEventListener('change', () => {
-        if (input.disabled) return;
-        hidden = [...rows.querySelectorAll('input')]
-          .filter((box) => box.checked && !box.disabled)
+        const next = [...rows.querySelectorAll('input')]
+          .filter((box) => box.checked)
           .map((box) => box.value);
+        if (next.join('\n') === hidden.join('\n')) return;
+        hidden = next;
         save(labels, hidden);
       });
       rows.append(row);

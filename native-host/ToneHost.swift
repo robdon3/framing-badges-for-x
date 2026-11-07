@@ -12,9 +12,8 @@ private let textLimit = 1000
 private let maxFrameBytes = 64 * 1024
 private let genericError = "The on-device model could not classify this post."
 private let emptyError = "Post text is empty."
-private let fallbackTone = "neutral"
 private let maxToneLength = 24
-private let maxCustomTones = 12
+private let maxToneCount = 12
 private let defaultToneLabels = ["whining", "fun", "sad", "angry", "hype", "sarcastic", "informative", "neutral"]
 
 private func toneInstructions(_ labels: [String]) -> String {
@@ -63,12 +62,11 @@ private func sanitizeLabels(_ raw: [String]?) -> [String] {
     var out: [String] = []
     var seen = Set<String>()
     for item in source {
-        guard let name = normalizeToneName(item), name != fallbackTone, !seen.contains(name) else { continue }
-        if out.count >= maxCustomTones { continue }
+        guard let name = normalizeToneName(item), !seen.contains(name) else { continue }
+        if out.count >= maxToneCount { continue }
         seen.insert(name)
         out.append(name)
     }
-    out.append(fallbackTone)
     return out
 }
 
@@ -133,9 +131,11 @@ private struct HostReply: Encodable, Sendable {
             try container.encode(error, forKey: .error)
             return
         }
+        try container.encode(ms ?? 0, forKey: .ms)
         if let label {
             try container.encode(label, forKey: .label)
-            try container.encode(ms ?? 0, forKey: .ms)
+        } else {
+            try container.encodeNil(forKey: .label)
         }
     }
 }
@@ -143,6 +143,9 @@ private struct HostReply: Encodable, Sendable {
 private func classify(_ incoming: Incoming) async -> HostReply {
     let labels = sanitizeLabels(incoming.labels)
     let clipped = sanitizePost(incoming.text)
+    if labels.isEmpty {
+        return HostReply(id: incoming.id, error: genericError)
+    }
     if clipped.isEmpty {
         return HostReply(id: incoming.id, error: emptyError)
     }
@@ -150,22 +153,21 @@ private func classify(_ incoming: Incoming) async -> HostReply {
         return HostReply(id: incoming.id, error: message)
     }
     let started = Date()
-    let chosen = await chooseLabel(clipped, labels: labels)
-    let label = exactLabel(chosen, in: labels) ?? fallbackTone
+    let label = await chooseLabel(clipped, labels: labels)
     let ms = max(0, Int(Date().timeIntervalSince(started) * 1000.0))
     return HostReply(id: incoming.id, label: label, ms: ms)
 }
 
-private func chooseLabel(_ text: String, labels: [String]) async -> String {
+private func chooseLabel(_ text: String, labels: [String]) async -> String? {
     let prompt = wrapPost(text)
     if let guided = await guidedRaw(prompt, labels: labels), let label = exactLabel(guided, in: labels) {
         return label
     }
-    // Plain string generation already works with command-line tools. Accept only an exact label.
+    // Plain text is accepted only when the whole reply is exactly one of the user's tones.
     if let plain = await plainRaw(prompt, labels: labels), let label = exactLabel(plain, in: labels) {
         return label
     }
-    return fallbackTone
+    return nil
 }
 
 private func guidedRaw(_ prompt: String, labels: [String]) async -> String? {

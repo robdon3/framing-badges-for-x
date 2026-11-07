@@ -4,11 +4,10 @@ export const HOST_NAME = 'com.xframingbadges.tone';
 export const TONE_TEXT_LIMIT = 1000;
 export const TONE_MESSAGE_TYPE = 'fcb-tone';
 
-export const FALLBACK_TONE = 'neutral';
 export const TONE_NAME_MAX = 24;
 export const TONE_LIST_MAX = 12;
 
-/** First-run list. Neutral stays last and cannot be removed. */
+/** First-run list. Neutral is an ordinary tone and can be removed. */
 export const DEFAULT_TONE_LABELS = Object.freeze([
   'whining',
   'fun',
@@ -80,19 +79,18 @@ export function normalizeToneName(raw) {
   return value;
 }
 
-/** At most 12 tones, then neutral. Missing input is the default list. Invalid names are dropped. */
+/** At most 12 tones. Missing input is the default list. Invalid names are dropped. Neutral is not added. */
 export function normalizeToneList(raw) {
   if (!Array.isArray(raw)) return [...DEFAULT_TONE_LABELS];
   const out = [];
   const seen = new Set();
   for (const item of raw) {
     const name = normalizeToneName(item);
-    if (!name || name === FALLBACK_TONE || seen.has(name)) continue;
+    if (!name || seen.has(name)) continue;
     if (out.length >= TONE_LIST_MAX) continue;
     seen.add(name);
     out.push(name);
   }
-  out.push(FALLBACK_TONE);
   return out;
 }
 
@@ -116,8 +114,13 @@ export function explainToneRejection(raw, list) {
   const name = normalizeToneName(text);
   if (!name) return 'Use letters, digits, spaces, hyphens, and apostrophes.';
   const current = normalizeToneList(list);
-  if (current.includes(name)) return name === FALLBACK_TONE ? 'Neutral stays on the list.' : 'That tone is already on the list.';
-  if (current.length > TONE_LIST_MAX) return 'You can add 12 tones plus neutral.';
+  if (current.includes(name)) return 'That tone is already on the list.';
+  if (current.length >= TONE_LIST_MAX) return 'You can add 12 tones.';
+  return '';
+}
+
+export function explainToneRemoval(list) {
+  if (normalizeToneList(list).length <= 1) return 'Keep at least one tone.';
   return '';
 }
 
@@ -177,8 +180,8 @@ export function parseHostMessage(message, labels) {
     return { id, error: normalizeToneError(message.error) };
   }
   const allowed = normalizeToneList(labels === undefined ? undefined : labels);
-  const name = normalizeToneName(message.label);
-  const label = name && allowed.includes(name) ? name : FALLBACK_TONE;
+  const name = message.label == null ? null : normalizeToneName(message.label);
+  const label = name && allowed.includes(name) ? name : null;
   const ms = Number(message.ms);
   return {
     id,
