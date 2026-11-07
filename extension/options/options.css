@@ -1,0 +1,150 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, sans-serif;
+  background: #f5f5f4;
+  color: #1c1917;
+}
+
+body { margin: 0; }
+
+main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #78716c;
+}
+
+h1 { margin: 0 0 12px; font-size: 28px; line-height: 1.2; }
+h2 { margin: 28px 0 8px; font-size: 18px; }
+
+.disclaimer {
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fef3c7;
+  color: #78350f;
+}
+
+.tone {
+  margin: 0 0 20px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.toggle {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-weight: 650;
+}
+
+.toggle input { margin-top: 3px; }
+
+#tone-status { margin: 8px 0; color: #57534e; }
+
+.hide-tones {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #e7e5e4;
+  border-radius: 12px;
+}
+
+.hide-tones legend { padding: 0 4px; font-weight: 650; }
+
+#hidden-tones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+}
+
+.hide-tone {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0;
+  font-weight: 500;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+label span {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 650;
+}
+
+textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d6d3d1;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font: 14px/1.45 ui-monospace, monospace;
+  background: #fff;
+  color: inherit;
+  resize: vertical;
+}
+
+textarea:focus { outline: 2px solid #0f172a; outline-offset: 1px; }
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 14px;
+}
+
+button {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font: 650 14px system-ui, sans-serif;
+  background: #1c1917;
+  color: #fafaf9;
+  cursor: pointer;
+}
+
+button#reset { background: #fff; color: #1c1917; border: 1px solid #d6d3d1; }
+
+.errors, .note, #status { color: #57534e; font-size: 14px; }
+.errors:empty { display: none; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+th, td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e7e5e4;
+  font-size: 14px;
+}
+
+.empty {
+  padding: 12px;
+  background: #fff;
+  border-radius: 12px;
+  color: #57534e;
+}
+
+@media (max-width: 640px) {
+  .grid { grid-template-columns: 1fr; }
+  h1 { font-size: 24px; }
+}

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Framing badges — source lists</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Framing badges for X</p>
+    <h1>Trusted and noisy handles</h1>
+    <p class="disclaimer">It scores framing, not truth. These lists are your labels. They do not verify a post, and they do not clear a framing flag.</p>
+    <section class="tone">
+      <label class="toggle">
+        <input type="checkbox" id="tone">
+        <span>Tone check (on-device Apple model)</span>
+      </label>
+      <p id="tone-status" role="status"></p>
+      <fieldset class="hide-tones">
+        <legend>Hide these tones</legend>
+        <div id="hidden-tones"></div>
+      </fieldset>
+      <p class="note">Off by default. None of the tones are hidden until you check one. Turn tone check on only after the Mac helper is installed. The framing badge stays rules-only. A post with no framing rule gets no framing badge. The tone chip is a separate label from this Mac, and it is not a fact check.</p>
+    </section>
+    <form id="lists">
+      <div class="grid">
+        <label>
+          <span>Trusted handles</span>
+          <textarea id="trusted" name="trusted" rows="12" spellcheck="false" placeholder="One handle per line&#10;reuters&#10;ap"></textarea>
+        </label>
+        <label>
+          <span>Noisy handles</span>
+          <textarea id="noisy" name="noisy" rows="12" spellcheck="false" placeholder="One handle per line&#10;example_wire"></textarea>
+        </label>
+      </div>
+      <p id="list-errors" class="errors" role="status"></p>
+      <div class="actions">
+        <button type="submit" id="save">Save lists</button>
+        <button type="button" id="reset">Reset flag counts</button>
+        <span id="status" role="status"></span>
+      </div>
+    </form>
+    <section>
+      <h2>Flags recorded in this browser</h2>
+      <p class="note">A post is counted once, the first time a framing rule fires. Counts stay in chrome.storage.local on this profile. Nothing is uploaded.</p>
+      <div id="counts"></div>
+    </section>
+  </main>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

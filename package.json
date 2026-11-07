@@ -1,0 +1,21 @@
+{
+  "name": "x-framing-badges",
+  "private": true,
+  "version": "1.3.0",
+  "type": "module",
+  "description": "Unpacked Manifest V3 extension that badges how an X post is framed. Rules only. It scores framing, not truth.",
+  "scripts": {
+    "build:fixture": "node scripts/render-fixtures.mjs && node scripts/build-fixture.mjs",
+    "build": "node scripts/make-icons.mjs && node scripts/render-fixtures.mjs && node scripts/build-fixture.mjs && node scripts/build-zip.mjs",
+    "test": "node scripts/make-icons.mjs && node scripts/render-fixtures.mjs && node scripts/build-fixture.mjs && node --test test/unit/*.test.js test/dom/*.test.js",
+    "screenshot": "node scripts/screenshot.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "linkedom": "^0.18.12",
+    "puppeteer-core": "^24.15.0"
+  }
+}

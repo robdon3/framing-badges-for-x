@@ -1,0 +1,114 @@
+import { authorKey, normalizeHandle } from '../rules/sources.js';
+import { normalizeHiddenTones } from '../tone/filter.js';
+import { TONE_OFF_STATUS, normalizeToneStatus } from '../tone/protocol.js';
+
+export const MAX_HANDLES = 500;
+export const COUNTED_ID_CAP = 2000;
+
+export const DEFAULT_STATE = {
+  trustedHandles: [],
+  noisyHandles: [],
+  authorFlagCounts: {},
+  countedPostIds: [],
+  toneEnabled: false,
+  hiddenTones: [],
+  toneStatus: { code: TONE_OFF_STATUS.code, message: TONE_OFF_STATUS.message },
+};
+
+function uniqueHandles(values) {
+  const seen = new Set();
+  const out = [];
+  for (const value of values || []) {
+    const handle = normalizeHandle(value);
+    if (!/^[a-z0-9_]{1,15}$/.test(handle) || seen.has(handle)) continue;
+    seen.add(handle);
+    out.push(handle);
+    if (out.length >= MAX_HANDLES) break;
+  }
+  return out;
+}
+
+export function normalizeState(raw) {
+  const authorFlagCounts = {};
+  for (const [key, value] of Object.entries(raw?.authorFlagCounts || {})) {
+    const handle = authorKey(key);
+    const count = Number(value);
+    if (!Number.isFinite(count) || count < 0) continue;
+    authorFlagCounts[handle] = Math.floor(count);
+  }
+  const countedPostIds = Array.isArray(raw?.countedPostIds)
+    ? raw.countedPostIds.map(String).filter(Boolean).slice(-COUNTED_ID_CAP)
+    : [];
+  return {
+    trustedHandles: uniqueHandles(raw?.trustedHandles),
+    noisyHandles: uniqueHandles(raw?.noisyHandles),
+    authorFlagCounts,
+    countedPostIds,
+    toneEnabled: raw?.toneEnabled === true,
+    hiddenTones: normalizeHiddenTones(raw?.hiddenTones),
+    toneStatus: normalizeToneStatus(raw?.toneStatus),
+  };
+}
+
+export function recordFlag(state, handle, postId) {
+  const current = normalizeState(state);
+  const id = String(postId || '');
+  if (id && current.countedPostIds.includes(id)) {
+    return { state: current, changed: false };
+  }
+  const key = authorKey(handle);
+  const authorFlagCounts = {
+    ...current.authorFlagCounts,
+    [key]: (current.authorFlagCounts[key] || 0) + 1,
+  };
+  const countedPostIds = id
+    ? [...current.countedPostIds, id].slice(-COUNTED_ID_CAP)
+    : current.countedPostIds;
+  return {
+    state: { ...current, authorFlagCounts, countedPostIds },
+    changed: true,
+  };
+}
+
+export function createMemoryStorage(initial = {}) {
+  let state = normalizeState({ ...DEFAULT_STATE, ...initial });
+  const listeners = new Set();
+  return {
+    async get() {
+      return structuredClone(state);
+    },
+    async set(patch) {
+      state = normalizeState({ ...state, ...patch });
+      for (const listener of listeners) listener(patch);
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+  };
+}
+
+export function hasChromeStorage() {
+  return !!globalThis.chrome?.storage?.local;
+}
+
+export function createChromeStorage() {
+  const chromeApi = globalThis.chrome;
+  return {
+    async get() {
+      const data = await chromeApi.storage.local.get(DEFAULT_STATE);
+      return normalizeState(data);
+    },
+    async set(patch) {
+      await chromeApi.storage.local.set(patch);
+    },
+    subscribe(fn) {
+      if (!chromeApi.storage?.onChanged) return () => {};
+      const listener = (changes, area) => {
+        if (area === 'local') fn(changes);
+      };
+      chromeApi.storage.onChanged.addListener(listener);
+      return () => chromeApi.storage.onChanged.removeListener(listener);
+    },
+  };
+}

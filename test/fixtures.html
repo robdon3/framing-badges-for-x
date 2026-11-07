@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en" data-fcb-fixture="1" data-fcb-fixture-now="2026-11-07T12:00:00.000Z">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Framing badge fixtures</title>
+  <link rel="stylesheet" href="fixtures.css">
+  <link rel="stylesheet" href="../extension/content/badge.css">
+</head>
+<body>
+  <header class="page-head">
+    <p class="eyebrow">Local fixture</p>
+    <h1>Framing badge fixtures</h1>
+    <p>It scores framing, not truth. These are fake posts with X-shaped markup so the rules can be checked without an account. The clock is frozen at 2026-11-07T12:00:00.000Z so the 48 hour examples stay put. Nothing on this page is sent anywhere.</p>
+  </header>
+  <div id="gallery">
+    <div class="feature"><section class="case">
+  <p class="expect">Expect claim. Claim wins over Alarm, Unstamped, and Bait.</p>
+  <article data-testid="tweet" role="article" data-fixture="combo" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/combo_wire"><span>Combo Wire</span></a>
+    <a href="/combo_wire"><span>@combo_wire</span></a>
+  </div>
+  <a class="permalink" href="/combo_wire/status/1000"><time datetime="2026-11-07T11:40:00.000Z">1h</time></a>
+  <div data-testid="tweetText">BREAKING: officials claim it is 62% and $0.62. RT if you saw this.</div>
+  
+</article>
+</section></div>
+    <div class="side"><section class="case">
+  <p class="expect">Expect alarm. BREAKING and a siren, no link, no named source.</p>
+  <article data-testid="tweet" role="article" data-fixture="alarm-fires" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/alarm_wire"><span>Alarm Wire</span></a>
+    <a href="/alarm_wire"><span>@alarm_wire</span></a>
+  </div>
+  <a class="permalink" href="/alarm_wire/status/1001"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">🚨 BREAKING: the grid is down</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect unstamped. A percent with no as-of time.</p>
+  <article data-testid="tweet" role="article" data-fixture="unstamped-percent" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/odds_desk"><span>Odds Desk</span></a>
+    <a href="/odds_desk"><span>@odds_desk</span></a>
+  </div>
+  <a class="permalink" href="/odds_desk/status/1002"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">Yes is trading at 62% on the contract.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect recycled. News framing plus a card date older than 48 hours. The link blocks Alarm.</p>
+  <article data-testid="tweet" role="article" data-fixture="recycled-old" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/archive_desk"><span>Archive Desk</span></a>
+    <a href="/archive_desk"><span>@archive_desk</span></a>
+  </div>
+  <a class="permalink" href="/archive_desk/status/1003"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">BREAKING: the council posted a notice about the bridge.</div>
+  <div data-testid="card.wrapper"><a href="https://example.com/bridge"><div>Example News</div><div>Bridge notice</div><time datetime="2026-10-01T12:00:00.000Z">Oct 1</time></a></div>
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect bait. Engagement phrase.</p>
+  <article data-testid="tweet" role="article" data-fixture="bait-rt" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/bait_desk"><span>Bait Desk</span></a>
+    <a href="/bait_desk"><span>@bait_desk</span></a>
+  </div>
+  <a class="permalink" href="/bait_desk/status/1004"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">RT if you want the agenda posted.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. No framing rule, so there is no framing badge. That is not a verification.</p>
+  <article data-testid="tweet" role="article" data-fixture="clean" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/clean_desk"><span>Clean Desk</span></a>
+    <a href="/clean_desk"><span>@clean_desk</span></a>
+  </div>
+  <a class="permalink" href="/clean_desk/status/1005"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">Here is the meeting agenda for Thursday.</div>
+  
+</article>
+</section></div>
+  </div>
+  <h2 class="more-title">Every rule, firing and not firing</h2>
+  <div id="more"><section class="case">
+  <p class="expect">Expect alarm. JUST IN, no link, no named source.</p>
+  <article data-testid="tweet" role="article" data-fixture="alarm-just-in" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/alarm_wire"><span>Alarm Wire</span></a>
+    <a href="/alarm_wire"><span>@alarm_wire</span></a>
+  </div>
+  <a class="permalink" href="/alarm_wire/status/1006"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">JUST IN: the pier is closed for the night.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect alarm. Siren only in an image alt, which is how X draws emoji.</p>
+  <article data-testid="tweet" role="article" data-fixture="alarm-emoji-alt" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/alarm_wire"><span>Alarm Wire</span></a>
+    <a href="/alarm_wire"><span>@alarm_wire</span></a>
+  </div>
+  <a class="permalink" href="/alarm_wire/status/1007"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">The siren is up <img alt="🚨" class="emoji"></div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect alarm. Mostly caps, no link, no named source.</p>
+  <article data-testid="tweet" role="article" data-fixture="alarm-caps" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/alarm_wire"><span>Alarm Wire</span></a>
+    <a href="/alarm_wire"><span>@alarm_wire</span></a>
+  </div>
+  <a class="permalink" href="/alarm_wire/status/1008"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">THE CITY LOST POWER AFTER THE STORM HIT HARD</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. BREAKING with a link does not alarm.</p>
+  <article data-testid="tweet" role="article" data-fixture="alarm-suppressed-link" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/alarm_wire"><span>Alarm Wire</span></a>
+    <a href="/alarm_wire"><span>@alarm_wire</span></a>
+  </div>
+  <a class="permalink" href="/alarm_wire/status/1009"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">BREAKING: <a href="https://example.com/grid">the grid note</a></div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. Card link and no visible date: no Alarm, and no Recycled guess.</p>
+  <article data-testid="tweet" role="article" data-fixture="alarm-suppressed-card" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/alarm_wire"><span>Alarm Wire</span></a>
+    <a href="/alarm_wire"><span>@alarm_wire</span></a>
+  </div>
+  <a class="permalink" href="/alarm_wire/status/1010"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">BREAKING: the council posted a notice.</div>
+  <div data-testid="card.wrapper"><a href="https://example.com/notice"><div>City desk</div><div>Bridge notice</div></a></div>
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. An @mention is a named source, so Alarm stays off.</p>
+  <article data-testid="tweet" role="article" data-fixture="alarm-suppressed-mention" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/alarm_wire"><span>Alarm Wire</span></a>
+    <a href="/alarm_wire"><span>@alarm_wire</span></a>
+  </div>
+  <a class="permalink" href="/alarm_wire/status/1011"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">BREAKING: @citypower confirmed the grid is down</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. A named outlet clears Alarm.</p>
+  <article data-testid="tweet" role="article" data-fixture="alarm-suppressed-outlet" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/alarm_wire"><span>Alarm Wire</span></a>
+    <a href="/alarm_wire"><span>@alarm_wire</span></a>
+  </div>
+  <a class="permalink" href="/alarm_wire/status/1012"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">BREAKING: Reuters confirmed the grid is down</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. Mostly caps, but Reuters is named.</p>
+  <article data-testid="tweet" role="article" data-fixture="alarm-caps-with-source" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/alarm_wire"><span>Alarm Wire</span></a>
+    <a href="/alarm_wire"><span>@alarm_wire</span></a>
+  </div>
+  <a class="permalink" href="/alarm_wire/status/1013"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">THE CITY LOST POWER AFTER REUTERS CONFIRMED THE STORM</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. “just in time” is not JUST IN.</p>
+  <article data-testid="tweet" role="article" data-fixture="alarm-just-in-time" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/alarm_wire"><span>Alarm Wire</span></a>
+    <a href="/alarm_wire"><span>@alarm_wire</span></a>
+  </div>
+  <a class="permalink" href="/alarm_wire/status/1014"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">I arrived just in time for the vote.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect claim. Officials claim is attribution, not a fact.</p>
+  <article data-testid="tweet" role="article" data-fixture="claim-officials" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/claim_desk"><span>Claim Desk</span></a>
+    <a href="/claim_desk"><span>@claim_desk</span></a>
+  </div>
+  <a class="permalink" href="/claim_desk/status/1015"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">Officials claim the bridge was closed.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect claim. Sources say.</p>
+  <article data-testid="tweet" role="article" data-fixture="claim-sources" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/claim_desk"><span>Claim Desk</span></a>
+    <a href="/claim_desk"><span>@claim_desk</span></a>
+  </div>
+  <a class="permalink" href="/claim_desk/status/1016"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">Sources say the vote flipped overnight.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect claim. Reportedly.</p>
+  <article data-testid="tweet" role="article" data-fixture="claim-reportedly" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/claim_desk"><span>Claim Desk</span></a>
+    <a href="/claim_desk"><span>@claim_desk</span></a>
+  </div>
+  <a class="permalink" href="/claim_desk/status/1017"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">The pier reportedly closed at noon.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect claim. A named “X says”.</p>
+  <article data-testid="tweet" role="article" data-fixture="claim-name-says" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/claim_desk"><span>Claim Desk</span></a>
+    <a href="/claim_desk"><span>@claim_desk</span></a>
+  </div>
+  <a class="permalink" href="/claim_desk/status/1018"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">Mayor Adams says the fund is empty.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect claim. Allegedly.</p>
+  <article data-testid="tweet" role="article" data-fixture="claim-allegedly" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/claim_desk"><span>Claim Desk</span></a>
+    <a href="/claim_desk"><span>@claim_desk</span></a>
+  </div>
+  <a class="permalink" href="/claim_desk/status/1019"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">The fund was allegedly empty by Friday.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. A pronoun is not the “X says” pattern.</p>
+  <article data-testid="tweet" role="article" data-fixture="claim-pronoun" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/claim_desk"><span>Claim Desk</span></a>
+    <a href="/claim_desk"><span>@claim_desk</span></a>
+  </div>
+  <a class="permalink" href="/claim_desk/status/1020"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">She says the fund is empty.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. No attribution phrase.</p>
+  <article data-testid="tweet" role="article" data-fixture="claim-plain" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/claim_desk"><span>Claim Desk</span></a>
+    <a href="/claim_desk"><span>@claim_desk</span></a>
+  </div>
+  <a class="permalink" href="/claim_desk/status/1021"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">The city closed the bridge at 4pm.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect recycled. Month-name date in the card, no datetime attribute.</p>
+  <article data-testid="tweet" role="article" data-fixture="recycled-text-date" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/archive_desk"><span>Archive Desk</span></a>
+    <a href="/archive_desk"><span>@archive_desk</span></a>
+  </div>
+  <a class="permalink" href="/archive_desk/status/1022"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">BREAKING: a notice about the ferry.</div>
+  <div data-testid="card.wrapper"><a href="https://example.com/ferry"><div>City desk</div><div>October 1, 2026</div></a></div>
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. Old card, but the post does not frame it as news.</p>
+  <article data-testid="tweet" role="article" data-fixture="recycled-not-news" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/archive_desk"><span>Archive Desk</span></a>
+    <a href="/archive_desk"><span>@archive_desk</span></a>
+  </div>
+  <a class="permalink" href="/archive_desk/status/1023"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">Filed this in my notes for class.</div>
+  <div data-testid="card.wrapper"><a href="https://example.com/archive"><div>City archive</div><div>Class notes</div><time datetime="2026-10-01T12:00:00.000Z">Oct 1</time></a></div>
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. Card date is inside 48 hours of the post.</p>
+  <article data-testid="tweet" role="article" data-fixture="recycled-fresh" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/archive_desk"><span>Archive Desk</span></a>
+    <a href="/archive_desk"><span>@archive_desk</span></a>
+  </div>
+  <a class="permalink" href="/archive_desk/status/1024"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">BREAKING: the council posted a notice about the bridge.</div>
+  <div data-testid="card.wrapper"><a href="https://example.com/fresh"><div>Example News</div><div>Bridge notice</div><time datetime="2026-11-07T10:00:00.000Z">Nov 7</time></a></div>
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect recycled. 49 hours older than the post.</p>
+  <article data-testid="tweet" role="article" data-fixture="recycled-49h" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/archive_desk"><span>Archive Desk</span></a>
+    <a href="/archive_desk"><span>@archive_desk</span></a>
+  </div>
+  <a class="permalink" href="/archive_desk/status/1025"><time datetime="2026-11-07T12:00:00.000Z">1h</time></a>
+  <div data-testid="tweetText">BREAKING: a short note on the ferry.</div>
+  <div data-testid="card.wrapper"><a href="https://example.com/ferry-49"><div>Example News</div><div>Ferry note</div><time datetime="2026-11-05T11:00:00.000Z">Nov 5</time></a></div>
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. 47 hours is not past 48.</p>
+  <article data-testid="tweet" role="article" data-fixture="recycled-47h" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/archive_desk"><span>Archive Desk</span></a>
+    <a href="/archive_desk"><span>@archive_desk</span></a>
+  </div>
+  <a class="permalink" href="/archive_desk/status/1026"><time datetime="2026-11-07T12:00:00.000Z">1h</time></a>
+  <div data-testid="tweetText">BREAKING: a short note on the ferry.</div>
+  <div data-testid="card.wrapper"><a href="https://example.com/ferry-47"><div>Example News</div><div>Ferry note</div><time datetime="2026-11-05T13:00:00.000Z">Nov 5</time></a></div>
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect recycled. The card headline frames it as news and the card date is old.</p>
+  <article data-testid="tweet" role="article" data-fixture="recycled-card-headline" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/archive_desk"><span>Archive Desk</span></a>
+    <a href="/archive_desk"><span>@archive_desk</span></a>
+  </div>
+  <a class="permalink" href="/archive_desk/status/1027"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">Sharing this.</div>
+  <div data-testid="card.wrapper"><a href="https://example.com/old-breaking"><div>Example News</div><div>BREAKING: bridge notice</div><time datetime="2020-01-15T12:00:00.000Z">Jan 15, 2020</time></a></div>
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. 01/11/2020 is visible but not parsed. No guess.</p>
+  <article data-testid="tweet" role="article" data-fixture="slash-date" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/archive_desk"><span>Archive Desk</span></a>
+    <a href="/archive_desk"><span>@archive_desk</span></a>
+  </div>
+  <a class="permalink" href="/archive_desk/status/1028"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">BREAKING: old numeric date only.</div>
+  <div data-testid="card.wrapper"><a href="https://example.com/slash"><div>City desk</div><div>01/11/2020</div></a></div>
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect bait. Nobody is talking about.</p>
+  <article data-testid="tweet" role="article" data-fixture="bait-nobody" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/bait_desk"><span>Bait Desk</span></a>
+    <a href="/bait_desk"><span>@bait_desk</span></a>
+  </div>
+  <a class="permalink" href="/bait_desk/status/1029"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">Nobody is talking about the hearing agenda.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect bait. They don't want you to know.</p>
+  <article data-testid="tweet" role="article" data-fixture="bait-secret" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/bait_desk"><span>Bait Desk</span></a>
+    <a href="/bait_desk"><span>@bait_desk</span></a>
+  </div>
+  <a class="permalink" href="/bait_desk/status/1030"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">They don't want you to know what was signed.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect bait. Outrage lexicon, no engagement phrase.</p>
+  <article data-testid="tweet" role="article" data-fixture="bait-outrage" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/bait_desk"><span>Bait Desk</span></a>
+    <a href="/bait_desk"><span>@bait_desk</span></a>
+  </div>
+  <a class="permalink" href="/bait_desk/status/1031"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">This is disgusting, outrageous, and corrupt. They are lying scum and it is shameful.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. Neutral wording.</p>
+  <article data-testid="tweet" role="article" data-fixture="bait-neutral" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/bait_desk"><span>Bait Desk</span></a>
+    <a href="/bait_desk"><span>@bait_desk</span></a>
+  </div>
+  <a class="permalink" href="/bait_desk/status/1032"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">The workshop notes are in the folder.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. One mild word is not outrage.</p>
+  <article data-testid="tweet" role="article" data-fixture="bait-mild" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/bait_desk"><span>Bait Desk</span></a>
+    <a href="/bait_desk"><span>@bait_desk</span></a>
+  </div>
+  <a class="permalink" href="/bait_desk/status/1033"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">This is a bad draft of the agenda.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. A news report of harm is not the outrage lexicon.</p>
+  <article data-testid="tweet" role="article" data-fixture="bait-violence" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/bait_desk"><span>Bait Desk</span></a>
+    <a href="/bait_desk"><span>@bait_desk</span></a>
+  </div>
+  <a class="permalink" href="/bait_desk/status/1034"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">Two people were killed in the storm.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect unstamped. A dollar price with no as-of time.</p>
+  <article data-testid="tweet" role="article" data-fixture="unstamped-dollar" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/odds_desk"><span>Odds Desk</span></a>
+    <a href="/odds_desk"><span>@odds_desk</span></a>
+  </div>
+  <a class="permalink" href="/odds_desk/status/1035"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">The share is $0.62.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect unstamped. Fractional odds.</p>
+  <article data-testid="tweet" role="article" data-fixture="unstamped-odds" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/odds_desk"><span>Odds Desk</span></a>
+    <a href="/odds_desk"><span>@odds_desk</span></a>
+  </div>
+  <a class="permalink" href="/odds_desk/status/1036"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">Odds are 5/2 on the vote.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect unstamped. American odds.</p>
+  <article data-testid="tweet" role="article" data-fixture="unstamped-american" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/odds_desk"><span>Odds Desk</span></a>
+    <a href="/odds_desk"><span>@odds_desk</span></a>
+  </div>
+  <a class="permalink" href="/odds_desk/status/1037"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">The contract is +150 with no as-of time.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect unstamped. A prediction-market name plus a number.</p>
+  <article data-testid="tweet" role="article" data-fixture="unstamped-market" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/odds_desk"><span>Odds Desk</span></a>
+    <a href="/odds_desk"><span>@odds_desk</span></a>
+  </div>
+  <a class="permalink" href="/odds_desk/status/1038"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">Polymarket contract last traded 0.62.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. The figure has an as-of clock time.</p>
+  <article data-testid="tweet" role="article" data-fixture="unstamped-stamped" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/odds_desk"><span>Odds Desk</span></a>
+    <a href="/odds_desk"><span>@odds_desk</span></a>
+  </div>
+  <a class="permalink" href="/odds_desk/status/1039"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">Kalshi Yes is 62% as of 14:05 UTC.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. The figure has a calendar as-of date.</p>
+  <article data-testid="tweet" role="article" data-fixture="unstamped-stamped-date" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/odds_desk"><span>Odds Desk</span></a>
+    <a href="/odds_desk"><span>@odds_desk</span></a>
+  </div>
+  <a class="permalink" href="/odds_desk/status/1040"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">The share is $0.62 as of November 6, 2026.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect unstamped. A far-away date does not stamp the price. The post time does not either.</p>
+  <article data-testid="tweet" role="article" data-fixture="unstamped-apart" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/odds_desk"><span>Odds Desk</span></a>
+    <a href="/odds_desk"><span>@odds_desk</span></a>
+  </div>
+  <a class="permalink" href="/odds_desk/status/1041"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">The share is $0.62. padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding Noted on November 1, 2024.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect unstamped. The status time is visible, and it still does not date the price.</p>
+  <article data-testid="tweet" role="article" data-fixture="unstamped-post-time-only" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/odds_desk"><span>Odds Desk</span></a>
+    <a href="/odds_desk"><span>@odds_desk</span></a>
+  </div>
+  <a class="permalink" href="/odds_desk/status/1042"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">The quoted price is $1.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect bait. On the noisy list in the fixture runner. The badge is still Bait, not a special color.</p>
+  <article data-testid="tweet" role="article" data-fixture="noisy-1" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/noisy_desk"><span>Noisy Desk</span></a>
+    <a href="/noisy_desk"><span>@noisy_desk</span></a>
+  </div>
+  <a class="permalink" href="/noisy_desk/status/1043"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">RT if this hearing matters.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect bait. Second flag for the same handle. The stored count becomes 2.</p>
+  <article data-testid="tweet" role="article" data-fixture="noisy-2" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/noisy_desk"><span>Noisy Desk</span></a>
+    <a href="/noisy_desk"><span>@noisy_desk</span></a>
+  </div>
+  <a class="permalink" href="/noisy_desk/status/1044"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">Nobody is talking about the hearing agenda.</div>
+  
+</article>
+</section>
+<section class="case">
+  <p class="expect">Expect no badge. Trusted does not invent a badge and does not verify the post.</p>
+  <article data-testid="tweet" role="article" data-fixture="trusted-clean" style="position:relative">
+  <div data-testid="User-Name">
+    <a href="/trusted_desk"><span>Trusted Desk</span></a>
+    <a href="/trusted_desk"><span>@trusted_desk</span></a>
+  </div>
+  <a class="permalink" href="/trusted_desk/status/1045"><time datetime="2026-11-07T11:30:00.000Z">1h</time></a>
+  <div data-testid="tweetText">The workshop notes are in the folder.</div>
+  
+</article>
+</section></div>
+  <script src="fixture-bundle.js"></script>
+</body>
+</html>

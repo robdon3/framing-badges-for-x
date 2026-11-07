@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Framing badges</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <p class="disclaimer">It scores framing, not truth.</p>
+  <p>Badges appear on posts as you scroll x.com and X Pro (pro.x.com). The extension only reads the page. It does not like, repost, reply, or send anything.</p>
+  <label class="toggle">
+    <input type="checkbox" id="tone">
+    <span>Tone check (on-device Apple model)</span>
+  </label>
+  <p id="tone-status" role="status"></p>
+  <fieldset class="hide-tones">
+    <legend>Hide these tones</legend>
+    <div id="hidden-tones"></div>
+  </fieldset>
+  <p id="hidden-count">Hidden this page: 0</p>
+  <button type="button" id="options">Edit trusted and noisy handles</button>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
