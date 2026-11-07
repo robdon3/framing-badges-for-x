@@ -82,10 +82,11 @@ export function createToneController({
         let result = null;
         try {
           result = await send(payload);
-        } catch (error) {
-          result = { id: payload.id, error: error?.message || 'Tone host disconnected.' };
+        } catch {
+          result = { id: payload.id, error: 'Tone host disconnected.' };
+        } finally {
+          payload.text = '';
         }
-        payload.text = '';
         if (result?.label) memory.set(payload.id, result.label);
         if (paused) break;
         if (result?.label) paint?.(payload.id, result.label);

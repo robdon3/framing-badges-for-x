@@ -49,6 +49,24 @@
     message: "Tone host not installed"
   });
   var STATUS_CODES = /* @__PURE__ */ new Set(["off", "armed", "idle", "connecting", "connected", "missing", "unavailable", "error"]);
+  var GENERIC_TONE_ERROR = "The on-device model could not classify this post.";
+  var FIXED_TONE_MESSAGES = Object.freeze(/* @__PURE__ */ new Set([
+    TONE_OFF_STATUS.message,
+    TONE_ARMED_STATUS.message,
+    TONE_IDLE_STATUS.message,
+    TONE_CONNECTING_STATUS.message,
+    TONE_CONNECTED_STATUS.message,
+    TONE_MISSING_STATUS.message,
+    GENERIC_TONE_ERROR,
+    "Post text is empty.",
+    "Apple on-device model is unavailable: this Mac is not eligible.",
+    "Apple on-device model is unavailable: Apple Intelligence is turned off.",
+    "Apple on-device model is unavailable: the model is not ready yet.",
+    "Apple on-device model is unavailable.",
+    "Tone host disconnected.",
+    "Tone host timed out."
+  ]));
+  var STRIPPED_CHARS = /[\u0000-\u001F\u007F\u00AD\u061C\u180E\u200B-\u200F\u2028\u2029\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g;
   function normalizeToneLabel(label) {
     const value = String(label ?? "").trim().toLowerCase();
     return LABEL_SET.has(value) ? value : null;
@@ -58,9 +76,26 @@
     if (!normalized) return null;
     return TONE_LABELS.find(([id]) => id === normalized)[1];
   }
-  function truncateToneText(text) {
-    const value = String(text ?? "").trim();
+  function normalizeToneError(error) {
+    const text = String(error ?? "").replace(/\s+/g, " ").trim();
+    if (FIXED_TONE_MESSAGES.has(text)) return text;
+    if (/not found|forbidden|specified native messaging host/i.test(text)) return TONE_MISSING_STATUS.message;
+    return GENERIC_TONE_ERROR;
+  }
+  function sanitizeToneText(text) {
+    let value = String(text ?? "").replace(STRIPPED_CHARS, "");
+    const delimiters = /\[\[\/?\s*POST\s*\]\]|<<<\/?\s*POST\s*>>>|<\/?\s*post\s*>/gi;
+    for (let pass = 0; pass < 4; pass += 1) {
+      delimiters.lastIndex = 0;
+      const next = value.replace(delimiters, " ");
+      if (next === value) break;
+      value = next;
+    }
+    value = value.replace(/[ \t]{2,}/g, " ").trim();
     return [...value].slice(0, TONE_TEXT_LIMIT).join("");
+  }
+  function truncateToneText(text) {
+    return sanitizeToneText(text);
   }
   function frameToneRequest(id, text) {
     return {
@@ -74,11 +109,9 @@
     }
     const id = message.id == null ? "" : String(message.id);
     if (message.error) {
-      const error = String(message.error).replace(/\s+/g, " ").trim().slice(0, 300);
-      return { id, error: error || "The on-device model could not classify this post." };
+      return { id, error: normalizeToneError(message.error) };
     }
-    const label = normalizeToneLabel(message.label);
-    if (!label) return { id, error: "Tone host returned an unknown label." };
+    const label = normalizeToneLabel(message.label) || "neutral";
     const ms = Number(message.ms);
     return {
       id,
@@ -88,12 +121,13 @@
   }
   function normalizeToneStatus(raw) {
     const code = STATUS_CODES.has(raw?.code) ? raw.code : "off";
-    const message = String(raw?.message || "").replace(/\s+/g, " ").trim().slice(0, 300);
-    if (message) return { code, message };
+    const message = String(raw?.message || "").replace(/\s+/g, " ").trim();
+    if (FIXED_TONE_MESSAGES.has(message)) return { code, message };
     if (code === "connected") return { code, message: TONE_CONNECTED_STATUS.message };
     if (code === "armed" || code === "connecting") return { code, message: TONE_ARMED_STATUS.message };
     if (code === "idle") return { code, message: TONE_IDLE_STATUS.message };
     if (code === "missing") return { code, message: TONE_MISSING_STATUS.message };
+    if (code === "unavailable") return { code, message: "Apple on-device model is unavailable." };
     if (code === "off") return { code, message: TONE_OFF_STATUS.message };
     return { code, message: "Tone host disconnected." };
   }
@@ -759,13 +793,14 @@ ${cardText}`),
   function evaluateAttribution(snapshot) {
     const phrases = findClaimPhrases(postText(snapshot));
     if (phrases.length === 0) return null;
-    const shown = phrases.slice(0, 4);
-    const extra = phrases.length > shown.length ? ` (+${phrases.length - shown.length} more)` : "";
+    const catalog = new Set(PATTERNS.map((pattern) => pattern.label.toLowerCase()));
+    const listed = phrases.filter((phrase) => catalog.has(phrase.toLowerCase())).slice(0, 4);
+    const why = listed.length ? `Attribution language, not a checked fact: ${listed.map((phrase) => `\u201C${phrase}\u201D`).join(", ")}.` : "Attribution language, not a checked fact.";
     return {
       ruleId: "attribution",
       badge: "claim",
       summary: "One-sided attribution",
-      why: `Attribution language, not a checked fact: ${shown.map((phrase) => `\u201C${phrase}\u201D`).join(", ")}${extra}.`
+      why
     };
   }
 
@@ -1051,8 +1086,7 @@ ${cardText}`),
       parts.push(`Engagement phrase: ${phrases.map((phrase) => `\u201C${phrase}\u201D`).join(", ")}.`);
     }
     if (outrage) {
-      const sample = sentiment.examples.length ? ` (${sentiment.examples.join(", ")})` : "";
-      parts.push(`Outrage lexicon compound ${sentiment.compound.toFixed(2)} from ${sentiment.strongNegativeHits} strong negative words${sample}. Sentiment is not evidence.`);
+      parts.push(`Outrage lexicon compound ${sentiment.compound.toFixed(2)} from ${sentiment.strongNegativeHits} strong negative words. Sentiment is not evidence.`);
     }
     return {
       ruleId: "bait",
@@ -1168,12 +1202,11 @@ ${cardText}`),
   function evaluateNumbers(snapshot) {
     const open = uncoveredNumbers(postText(snapshot));
     if (open.length === 0) return null;
-    const shown = open.slice(0, 4).map((number) => number.raw.trim());
     return {
       ruleId: "numbers",
       badge: "unstamped",
       summary: "Number or odds with no as-of time",
-      why: `Number or odds with no as-of time: ${shown.join(", ")}. The post time does not date the figure.`
+      why: "Number or odds with no as-of time. The post time does not date the figure."
     };
   }
 
@@ -1321,12 +1354,12 @@ ${cardText}`),
       try {
         const hit = rule.evaluate(snapshot, context);
         if (hit?.badge) hits.push(hit);
-      } catch (error) {
+      } catch {
         errors.push({
           ruleId: rule.id,
           badge: null,
           summary: "Rule error",
-          why: `${rule.id} failed open and was skipped (${error?.message || error}).`
+          why: `${rule.id} failed open and was skipped.`
         });
       }
     }
@@ -1429,6 +1462,15 @@ ${cardText}`),
   // extension/storage/state.js
   var MAX_HANDLES = 500;
   var COUNTED_ID_CAP = 2e3;
+  var STORAGE_KEYS = Object.freeze([
+    "trustedHandles",
+    "noisyHandles",
+    "authorFlagCounts",
+    "countedPostIds",
+    "toneEnabled",
+    "hiddenTones",
+    "toneStatus"
+  ]);
   var DEFAULT_STATE = {
     trustedHandles: [],
     noisyHandles: [],
@@ -1469,6 +1511,19 @@ ${cardText}`),
       toneStatus: normalizeToneStatus(raw?.toneStatus)
     };
   }
+  function settingsPatch(patch) {
+    const picked = {};
+    if (!patch || typeof patch !== "object") return picked;
+    for (const key of STORAGE_KEYS) {
+      if (Object.prototype.hasOwnProperty.call(patch, key)) picked[key] = patch[key];
+    }
+    const normalized = normalizeState({ ...DEFAULT_STATE, ...picked });
+    const out = {};
+    for (const key of STORAGE_KEYS) {
+      if (Object.prototype.hasOwnProperty.call(patch, key)) out[key] = normalized[key];
+    }
+    return out;
+  }
   function recordFlag(state, handle, postId) {
     const current = normalizeState(state);
     const id = String(postId || "");
@@ -1494,8 +1549,9 @@ ${cardText}`),
         return structuredClone(state);
       },
       async set(patch) {
-        state = normalizeState({ ...state, ...patch });
-        for (const listener of listeners) listener(patch);
+        const safe = settingsPatch(patch);
+        state = normalizeState({ ...state, ...safe });
+        for (const listener of listeners) listener(safe);
       },
       subscribe(fn) {
         listeners.add(fn);
@@ -1514,7 +1570,7 @@ ${cardText}`),
         return normalizeState(data);
       },
       async set(patch) {
-        await chromeApi.storage.local.set(patch);
+        await chromeApi.storage.local.set(settingsPatch(patch));
       },
       subscribe(fn) {
         if (!chromeApi.storage?.onChanged) return () => {
@@ -1573,16 +1629,21 @@ ${cardText}`),
   // extension/tone/request.js
   async function requestToneLabel({ id, text, send }) {
     const request = frameToneRequest(id, text);
-    if (!request.id || !request.text) return { label: null };
-    let response;
     try {
-      response = await send(request);
-    } catch (error) {
-      return { label: null, error: error?.message || "Tone host disconnected." };
+      if (!request.id || !request.text) return { label: null };
+      let response;
+      try {
+        response = await send(request);
+      } catch {
+        return { label: null, error: "Tone host disconnected." };
+      }
+      const parsed = parseHostMessage(response);
+      if (parsed.id !== request.id) return { label: null };
+      if (!parsed.label) return { label: null, error: parsed.error };
+      return { label: parsed.label, ms: parsed.ms };
+    } finally {
+      request.text = "";
     }
-    const parsed = parseHostMessage(response);
-    if (!parsed.label) return { label: null, error: parsed.error };
-    return { label: parsed.label, ms: parsed.ms };
   }
 
   // extension/tone/watch.js
@@ -1697,10 +1758,11 @@ ${cardText}`),
           let result = null;
           try {
             result = await send(payload);
-          } catch (error) {
-            result = { id: payload.id, error: error?.message || "Tone host disconnected." };
+          } catch {
+            result = { id: payload.id, error: "Tone host disconnected." };
+          } finally {
+            payload.text = "";
           }
-          payload.text = "";
           if (result?.label) memory.set(payload.id, result.label);
           if (paused) break;
           if (result?.label) paint2?.(payload.id, result.label);

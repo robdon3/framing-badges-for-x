@@ -12,12 +12,12 @@ export function scorePost(snapshot, context = {}) {
     try {
       const hit = rule.evaluate(snapshot, context);
       if (hit?.badge) hits.push(hit);
-    } catch (error) {
+    } catch {
       errors.push({
         ruleId: rule.id,
         badge: null,
         summary: 'Rule error',
-        why: `${rule.id} failed open and was skipped (${error?.message || error}).`,
+        why: `${rule.id} failed open and was skipped.`,
       });
     }
   }
@@ -38,8 +38,8 @@ export async function collectAsyncResult(snapshot, context = {}) {
         sawTone = true;
         tone = result.tone;
       }
-    } catch (error) {
-      notes.push(`Extra check failed: ${error?.message || error}`);
+    } catch {
+      notes.push('Extra check failed.');
     }
   }
   const extra = { hits, note: notes.join(' ') };

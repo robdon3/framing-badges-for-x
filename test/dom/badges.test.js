@@ -49,7 +49,8 @@ describe('fixture badges', () => {
     const combo = document.querySelector('[data-fixture="combo"] .fcb-tip').textContent;
     assert.match(combo, /officials claim/i);
     assert.match(combo, /BREAKING/);
-    assert.match(combo, /62%/);
+    assert.doesNotMatch(combo, /62%/);
+    assert.equal(combo.includes('BREAKING: officials claim it is 62%'), false);
     assert.match(combo, /Number or odds with no as-of time/);
     assert.match(combo, /Unstamped/);
     assert.doesNotMatch(combo, /Opinion/);

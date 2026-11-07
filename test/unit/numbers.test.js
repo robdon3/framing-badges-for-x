@@ -5,8 +5,13 @@ import { snapshot } from '../helpers.js';
 
 describe('numbers', () => {
   it('flags percents, dollar prices, odds, and prediction markets with no timestamp', () => {
-    assert.match(evaluateNumbers(snapshot({ text: 'Yes is trading at 62% on the contract.' })).why, /62%/);
-    assert.match(evaluateNumbers(snapshot({ text: 'The share is $0.62.' })).why, /\$0\.62/);
+    const percent = evaluateNumbers(snapshot({ text: 'Yes is trading at 62% on the contract.' }));
+    assert.equal(percent.badge, 'unstamped');
+    assert.equal(percent.why.includes('62%'), false);
+    assert.match(percent.why, /Number or odds with no as-of time/);
+    const price = evaluateNumbers(snapshot({ text: 'The share is $0.62.' }));
+    assert.equal(price.badge, 'unstamped');
+    assert.equal(price.why.includes('$0.62'), false);
     const odds = evaluateNumbers(snapshot({ text: 'Odds are 5/2 on the vote.' }));
     assert.equal(odds.badge, 'unstamped');
     assert.match(odds.why, /Number or odds with no as-of time/);

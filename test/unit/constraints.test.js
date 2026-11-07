@@ -21,7 +21,7 @@ describe('constraints', () => {
   it('locks the manifest to storage and x.com', () => {
     const manifest = JSON.parse(readFileSync(path.join(extensionDir, 'manifest.json'), 'utf8'));
     assert.equal(manifest.manifest_version, 3);
-    assert.equal(manifest.version, '1.3.1');
+    assert.equal(manifest.version, '1.3.2');
     assert.equal(typeof manifest.key, 'string');
     assert.ok(manifest.key.length > 100);
     assert.deepEqual(manifest.permissions, ['storage', 'nativeMessaging']);
@@ -92,5 +92,74 @@ describe('constraints', () => {
         assert.match(url, allowedUrl, `${rel} has ${url}`);
       }
     }
+  });
+
+  it('writes only settings and keeps post text out of storage and logs', () => {
+    const allowed = new Set([
+      'trustedHandles',
+      'noisyHandles',
+      'authorFlagCounts',
+      'countedPostIds',
+      'toneEnabled',
+      'hiddenTones',
+      'toneStatus',
+    ]);
+    const sources = filesUnder(extensionDir).filter((file) => file.endsWith('.js') && !file.endsWith('content-bundle.js'));
+    const banned = /\blocalStorage\b|\bsessionStorage\b|\bindexedDB\b|document\.cookie|storage\.sync\b|storage\.session\b|\bconsole\.(?:log|debug|info|warn|error)\s*\(/;
+    for (const file of sources) {
+      const text = readFileSync(file, 'utf8');
+      const rel = path.relative(extensionDir, file);
+      assert.equal(banned.test(text), false, rel);
+      let index = 0;
+      while ((index = text.indexOf('.set(', index)) !== -1) {
+        const behind = text.slice(Math.max(0, index - 48), index).replace(/\s+/g, '');
+        const area = behind.match(/storage\.(local|sync|session)$/);
+        if (!area) {
+          index += 5;
+          continue;
+        }
+        assert.equal(area[1], 'local', rel);
+        let cursor = index + 5;
+        while (/\s/.test(text[cursor])) cursor += 1;
+        if (text[cursor] === '{') {
+          let depth = 0;
+          let end = cursor;
+          for (let i = cursor; i < text.length; i += 1) {
+            if (text[i] === '{') depth += 1;
+            else if (text[i] === '}') {
+              depth -= 1;
+              if (depth === 0) {
+                end = i;
+                break;
+              }
+            }
+          }
+          const body = text.slice(cursor + 1, end).replace(/'(?:\\.|[^'])*'|"(?:\\.|[^"])*"|`(?:\\.|[^`])*`/g, '""');
+          const keys = new Set();
+          for (const match of body.matchAll(/([A-Za-z_][\w]*)\s*:/g)) keys.add(match[1]);
+          for (const match of body.matchAll(/(?:^|[,{\n])\s*([A-Za-z_][\w]*)\s*(?=,|\n|$)/g)) keys.add(match[1]);
+          for (const key of keys) assert.ok(allowed.has(key), `${rel} writes ${key}`);
+          assert.ok(keys.size > 0, rel);
+        } else {
+          const expression = text.slice(cursor, text.indexOf(')', cursor));
+          assert.match(expression, /settingsPatch\s*\(/, rel);
+        }
+        index = cursor;
+      }
+    }
+
+    const host = readFileSync(path.join(root, 'native-host/ToneHost.swift'), 'utf8');
+    assert.match(host, /DynamicGenerationSchema/);
+    assert.doesNotMatch(host, /@Generable/);
+    assert.match(host, /\[\[POST\]\]/);
+    assert.match(host, /64 \* 1024/);
+    assert.match(host, /untrusted data/);
+    assert.match(host, /LanguageModelSession\(instructions: toneInstructions\)/);
+    assert.doesNotMatch(host, /\bprint\s*\(/);
+    assert.doesNotMatch(host, /FileManager/);
+    assert.match(host, /tone-host: could not write a reply/);
+    const install = readFileSync(path.join(root, 'native-host/install.sh'), 'utf8');
+    assert.match(install, /allowed_origins => \[\$origin\]/);
+    assert.equal((install.match(/eadkmedlbenoalongikmdhedfinggpoh/g) || []).length, 1);
   });
 });

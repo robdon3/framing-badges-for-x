@@ -120,11 +120,10 @@ export function uncoveredNumbers(text) {
 export function evaluateNumbers(snapshot) {
   const open = uncoveredNumbers(postText(snapshot));
   if (open.length === 0) return null;
-  const shown = open.slice(0, 4).map((number) => number.raw.trim());
   return {
     ruleId: 'numbers',
     badge: 'unstamped',
     summary: 'Number or odds with no as-of time',
-    why: `Number or odds with no as-of time: ${shown.join(', ')}. The post time does not date the figure.`,
+    why: 'Number or odds with no as-of time. The post time does not date the figure.',
   };
 }

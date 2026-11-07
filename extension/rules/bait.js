@@ -125,8 +125,7 @@ export function evaluateBait(snapshot) {
     parts.push(`Engagement phrase: ${phrases.map((phrase) => `“${phrase}”`).join(', ')}.`);
   }
   if (outrage) {
-    const sample = sentiment.examples.length ? ` (${sentiment.examples.join(', ')})` : '';
-    parts.push(`Outrage lexicon compound ${sentiment.compound.toFixed(2)} from ${sentiment.strongNegativeHits} strong negative words${sample}. Sentiment is not evidence.`);
+    parts.push(`Outrage lexicon compound ${sentiment.compound.toFixed(2)} from ${sentiment.strongNegativeHits} strong negative words. Sentiment is not evidence.`);
   }
   return {
     ruleId: 'bait',

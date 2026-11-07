@@ -5,6 +5,16 @@ import { TONE_OFF_STATUS, normalizeToneStatus } from '../tone/protocol.js';
 export const MAX_HANDLES = 500;
 export const COUNTED_ID_CAP = 2000;
 
+export const STORAGE_KEYS = Object.freeze([
+  'trustedHandles',
+  'noisyHandles',
+  'authorFlagCounts',
+  'countedPostIds',
+  'toneEnabled',
+  'hiddenTones',
+  'toneStatus',
+]);
+
 export const DEFAULT_STATE = {
   trustedHandles: [],
   noisyHandles: [],
@@ -50,6 +60,21 @@ export function normalizeState(raw) {
   };
 }
 
+/** Writes only settings. Post text and any other key are dropped. */
+export function settingsPatch(patch) {
+  const picked = {};
+  if (!patch || typeof patch !== 'object') return picked;
+  for (const key of STORAGE_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(patch, key)) picked[key] = patch[key];
+  }
+  const normalized = normalizeState({ ...DEFAULT_STATE, ...picked });
+  const out = {};
+  for (const key of STORAGE_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(patch, key)) out[key] = normalized[key];
+  }
+  return out;
+}
+
 export function recordFlag(state, handle, postId) {
   const current = normalizeState(state);
   const id = String(postId || '');
@@ -78,8 +103,9 @@ export function createMemoryStorage(initial = {}) {
       return structuredClone(state);
     },
     async set(patch) {
-      state = normalizeState({ ...state, ...patch });
-      for (const listener of listeners) listener(patch);
+      const safe = settingsPatch(patch);
+      state = normalizeState({ ...state, ...safe });
+      for (const listener of listeners) listener(safe);
     },
     subscribe(fn) {
       listeners.add(fn);
@@ -100,7 +126,7 @@ export function createChromeStorage() {
       return normalizeState(data);
     },
     async set(patch) {
-      await chromeApi.storage.local.set(patch);
+      await chromeApi.storage.local.set(settingsPatch(patch));
     },
     subscribe(fn) {
       if (!chromeApi.storage?.onChanged) return () => {};

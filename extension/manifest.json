@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Framing Badges for X",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "Small framing badges on x.com and X Pro posts. It scores framing, not truth. Optional on-device tone chip. No network.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Eqvd62QTRgy6NG6sQRHxpz3KmYFCca38TIzPAstnC+8g5jaJNQEvxtyTsLKKUb/ldeeT8llha9XTrdgrG/6UGKfAm0PungvG7y0L5nL6QrqSlXh4jJX3FEY14/ofPGT7A7zydkUa0rg3GRZPKi2kz7IL1xSNEZdvR5lkXWgNAcopJlGj82JyFQHiri3r2LX41yV6+oHwlc9LebbEkHRueSbL8ZJxc91nEkLyuMPHek/lEu+3v1+MSCjqQlilwlwi6wNQrFOgScHiLiEGX6ftN20DM6QmqKOdJtaVZ9Zc+YeRwUh5sl8+OEB3EXH8H2+ooA1FZzq94RDe93iaMGcJQIDAQAB",
   "permissions": ["storage", "nativeMessaging"],

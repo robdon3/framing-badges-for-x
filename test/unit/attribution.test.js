@@ -9,7 +9,10 @@ describe('attribution', () => {
     assert.match(evaluateAttribution(snapshot({ text: 'Sources say the vote flipped overnight.' })).why, /sources say/i);
     assert.equal(evaluateAttribution(snapshot({ text: 'The pier reportedly closed at noon.' })).badge, 'claim');
     assert.equal(evaluateAttribution(snapshot({ text: 'The fund was allegedly empty by Friday.' })).badge, 'claim');
-    assert.match(evaluateAttribution(snapshot({ text: 'Mayor Adams says the fund is empty.' })).why, /Mayor Adams says/);
+    const named = evaluateAttribution(snapshot({ text: 'Mayor Adams says the fund is empty.' }));
+    assert.equal(named.badge, 'claim');
+    assert.equal(named.why.includes('Mayor Adams'), false);
+    assert.match(named.why, /Attribution language/);
   });
 
   it('does not treat a pronoun or a plain sentence as a claim', () => {

@@ -46,12 +46,15 @@ export function findClaimPhrases(text) {
 export function evaluateAttribution(snapshot) {
   const phrases = findClaimPhrases(postText(snapshot));
   if (phrases.length === 0) return null;
-  const shown = phrases.slice(0, 4);
-  const extra = phrases.length > shown.length ? ` (+${phrases.length - shown.length} more)` : '';
+  const catalog = new Set(PATTERNS.map((pattern) => pattern.label.toLowerCase()));
+  const listed = phrases.filter((phrase) => catalog.has(phrase.toLowerCase())).slice(0, 4);
+  const why = listed.length
+    ? `Attribution language, not a checked fact: ${listed.map((phrase) => `“${phrase}”`).join(', ')}.`
+    : 'Attribution language, not a checked fact.';
   return {
     ruleId: 'attribution',
     badge: 'claim',
     summary: 'One-sided attribution',
-    why: `Attribution language, not a checked fact: ${shown.map((phrase) => `“${phrase}”`).join(', ')}${extra}.`,
+    why,
   };
 }

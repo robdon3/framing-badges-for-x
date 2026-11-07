@@ -77,9 +77,11 @@ export function createToneSession({
 
   function classify(incoming) {
     const request = frameToneRequest(incoming?.id, incoming?.text);
+    if (incoming && typeof incoming === 'object') incoming.text = '';
     return queue.enqueue(() => new Promise((resolve) => {
       const opened = open();
       if (!opened.ok || !port) {
+        request.text = '';
         resolve({ id: request.id, error: opened.message || 'Tone host not installed' });
         return;
       }
@@ -90,8 +92,10 @@ export function createToneSession({
       }, timeoutMs);
       pending.set(request.id, { resolve, timer });
       try {
-        port.postMessage(request);
+        port.postMessage({ id: request.id, text: request.text });
+        request.text = '';
       } catch {
+        request.text = '';
         clearTimeout(timer);
         pending.delete(request.id);
         resolve({ id: request.id, error: 'Tone host not installed' });

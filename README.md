@@ -101,10 +101,22 @@ Standards mapping, in short: this build never assigns “verified.” Claim is t
 - It does not click, like, repost, reply, post, or type.
 - It makes no network requests. No remote scripts, fonts, or images. No telemetry.
 - Permissions are `storage`, `nativeMessaging`, and host access to `https://x.com/*`, `https://www.x.com/*`, and `https://pro.x.com/*`. Nothing else. `nativeMessaging` talks only to the local tone helper, and only while Tone check is on.
-- The tone helper reads post text from Chrome's native-messaging pipe. It does not write that text to disk.
+- Post text is not saved. It is not written to `chrome.storage` (local, sync, or session), `localStorage`, IndexedDB, or cookies. The badge, tooltip, and hidden bar use fixed wording, not the post. The extension does not log the post.
+- The tone helper reads post text from Chrome's native-messaging pipe, classifies it, and drops it. It does not write that text to disk, stderr, or a file. A reply is `{id, label, ms}` or `{id, error}` with a fixed error string.
+- While a request is in flight, the text sits only in that request. After the send, that copy is cleared. The in-memory label map is post id to one of the eight tone labels. It does not hold text, and a refresh drops it.
 - Extension pages use a CSP of `default-src 'none'` with local scripts and styles only.
-- Handles, lists, and flag counts stay in `chrome.storage.local` on this profile. Tone labels do not. They live in the page until you refresh it.
+- Handles, lists, flag counts, the tone on/off switch, the hide list, and a fixed status line stay in `chrome.storage.local` on this profile. Tone labels do not.
 - Badge CSS is limited to `.fcb-` classes so it does not restyle the site. The badge is `position: absolute`, so it does not push the post text. If a post’s computed position is `static`, the article gets `position: relative` so the badge has a box to sit in.
+
+## Security
+
+A post is untrusted text. The tone check treats it as data, not as instructions.
+
+- The helper's instructions stay fixed and separate from the post. The post is wrapped between `[[POST]]` and `[[/POST]]`, after control characters, zero-width characters, bidi overrides, and those delimiter marks are stripped. The text is capped at about 1000 characters.
+- The model may only return one of: whining, fun, sad, angry, hype, sarcastic, informative, neutral. Anything else, including a reply that tries to say something else, becomes neutral. The extension checks the reply again. A label off that list becomes neutral. A reply whose id does not match the request is ignored.
+- Each request starts a new Foundation Models session, so one post's text is not left in the next post's transcript.
+- Frames larger than 64KB are rejected without being read. Malformed JSON gets a generic error and is not sent to the model.
+- The native host manifest allows only this extension's id, `chrome-extension://eadkmedlbenoalongikmdhedfinggpoh/`.
 
 ## Tone chip and the async slot
 
@@ -114,7 +126,7 @@ There is still no “check this post” button and no network permission. The op
 - `collectAsyncResult()` / `scorePostWithAsync()` in `extension/content/scorer.js`
 - `applyAsyncResult()` in `extension/content/badge.js` paints a separate `.fcb-tone` chip. Framing precedence is unchanged, and the framing tooltip stays on the rules result.
 
-The content script asks only for a post that is in the viewport (each X Pro column has its own scroll root) and has stayed there for about 500ms. If it scrolls away before that request is sent, it is dropped. The waiting list is at most 10 posts, newest visible first. One request runs at a time. Labels are an in-memory map of post id to label, capped at 300, and they disappear on refresh. Post text is not kept for posts that have scrolled off, and it is not written to disk.
+The content script asks only for a post that is in the viewport (each X Pro column has its own scroll root) and has stayed there for about 500ms. If it scrolls away before that request is sent, it is dropped. The waiting list is at most 10 posts, newest visible first. One request runs at a time. Labels are an in-memory map of post id to one of the eight labels, capped at 300, and they disappear on refresh. Post text is cleared after the send. It is not written to disk.
 
 The service worker opens `connectNative` to `com.xframingbadges.tone` on the first request and closes it after about 60 seconds with nothing to do, when Tone check is turned off, or when no x.com tab is open. Each request starts a new Foundation Models session so the transcript does not grow. Closing the port lets the helper process and its model memory exit.
 
