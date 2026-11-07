@@ -13,7 +13,7 @@ import { normalizeState, settingsPatch } from '../../extension/storage/state.js'
 import { decodeNativeFrames, encodeNativeFrame } from '../../extension/tone/framing.js';
 import { createToneLifetime, TONE_IDLE_MS } from '../../extension/tone/lifetime.js';
 import { createToneMemory, TONE_MEMORY_CAP } from '../../extension/tone/memory.js';
-import { frameToneRequest, normalizeToneLabel, parseHostMessage, sanitizeToneText, truncateToneText } from '../../extension/tone/protocol.js';
+import { DEFAULT_TONE_LABELS, explainToneRejection, frameToneRequest, hashToneList, normalizeToneLabel, normalizeToneList, parseHostMessage, sanitizeToneText, truncateToneText } from '../../extension/tone/protocol.js';
 import { createJobQueue } from '../../extension/tone/queue.js';
 import { requestToneLabel } from '../../extension/tone/request.js';
 import { createToneSession } from '../../extension/tone/session.js';
@@ -67,12 +67,12 @@ describe('tone', { concurrency: 1 }, () => {
   it('derives the stable unpacked extension id from the manifest key', () => {
     const manifest = JSON.parse(readFileSync(path.join(root, 'extension/manifest.json'), 'utf8'));
     assert.equal(extensionIdFromKey(manifest.key), EXPECTED_EXTENSION_ID);
-    assert.equal(manifest.version, '1.3.2');
+    assert.equal(manifest.version, '1.4.0');
   });
 
   it('frames native messages as a little-endian length plus JSON', () => {
     const payload = frameToneRequest('42', '  hello  ');
-    assert.deepEqual(payload, { id: '42', text: 'hello' });
+    assert.deepEqual(payload, { id: '42', text: 'hello', labels: [...DEFAULT_TONE_LABELS] });
     const frame = encodeNativeFrame(payload);
     assert.equal(frame[0] + (frame[1] << 8) + (frame[2] << 16) + (frame[3] << 24), frame.byteLength - 4);
     assert.equal(frame[1], 0);
@@ -585,5 +585,36 @@ describe('tone', { concurrency: 1 }, () => {
     assert.equal(mismatched.label, null);
     assert.equal(JSON.stringify(mismatched).includes('HACKED'), false);
     assert.equal(JSON.stringify(mismatched).includes('hype'), false);
+  });
+
+  it('validates a custom tone list and drops a model answer outside it', () => {
+    const custom = ['hopeful', 'dry humor', 'neutral'];
+    assert.deepEqual(normalizeToneList([' Hopeful ', 'dry  humor', 'hopeful', '<b>', 'no\u0001pe']), ['hopeful', 'dry humor', 'neutral']);
+    assert.equal(explainToneRejection('<script>', custom).length > 0, true);
+    assert.equal(explainToneRejection('a'.repeat(25), custom), 'Use 24 characters or fewer.');
+    assert.equal(explainToneRejection('fun\u0007', custom).includes('letters'), true);
+    const full = normalizeToneList(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm']);
+    assert.equal(full.length, 13);
+    assert.equal(full.includes('m'), false);
+    assert.equal(full.at(-1), 'neutral');
+    assert.equal(explainToneRejection('extra', full), 'You can add 12 tones plus neutral.');
+    const request = frameToneRequest('7', 'hello', ['Hopeful', '<bad>', 'dry humor']);
+    assert.deepEqual(request.labels, ['hopeful', 'dry humor', 'neutral']);
+    assert.equal(request.text, 'hello');
+    const outside = parseHostMessage({ id: '7', label: 'HACKED', text: 'hello' }, request.labels);
+    assert.equal(outside.label, 'neutral');
+    assert.equal(JSON.stringify(outside).includes('HACKED'), false);
+    assert.equal(parseHostMessage({ id: '7', label: 'dry humor' }, request.labels).label, 'dry humor');
+    assert.equal(hashToneList(['hopeful', 'neutral']) !== hashToneList(DEFAULT_TONE_LABELS), true);
+
+    const memory = createToneMemory();
+    assert.equal(memory.set('1', 'hype'), true);
+    const previous = memory.hash;
+    memory.useList(['hopeful', 'neutral']);
+    assert.notEqual(memory.hash, previous);
+    assert.equal(memory.get('1'), null);
+    assert.equal(memory.set('1', 'hype'), false);
+    assert.equal(memory.set('1', 'hopeful'), true);
+    assert.equal(memory.get('1'), 'hopeful');
   });
 });

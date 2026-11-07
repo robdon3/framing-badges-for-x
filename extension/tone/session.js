@@ -27,10 +27,12 @@ export function createToneSession({
   }
 
   function handleMessage(message) {
-    const parsed = parseHostMessage(message);
-    const waiter = pending.get(parsed.id);
+    const id = message && typeof message === 'object' && message.id != null ? String(message.id) : '';
+    const waiter = pending.get(id);
     if (!waiter) return;
-    pending.delete(parsed.id);
+    const parsed = parseHostMessage(message, waiter.labels);
+    if (parsed.id !== waiter.id) return;
+    pending.delete(id);
     clearTimeout(waiter.timer);
     waiter.resolve(parsed);
   }
@@ -76,7 +78,7 @@ export function createToneSession({
   }
 
   function classify(incoming) {
-    const request = frameToneRequest(incoming?.id, incoming?.text);
+    const request = frameToneRequest(incoming?.id, incoming?.text, incoming?.labels);
     if (incoming && typeof incoming === 'object') incoming.text = '';
     return queue.enqueue(() => new Promise((resolve) => {
       const opened = open();
@@ -90,9 +92,9 @@ export function createToneSession({
         pending.delete(request.id);
         resolve({ id: request.id, error: 'Tone host timed out.' });
       }, timeoutMs);
-      pending.set(request.id, { resolve, timer });
+      pending.set(request.id, { resolve, timer, id: request.id, labels: request.labels });
       try {
-        port.postMessage({ id: request.id, text: request.text });
+        port.postMessage({ id: request.id, text: request.text, labels: request.labels });
         request.text = '';
       } catch {
         request.text = '';

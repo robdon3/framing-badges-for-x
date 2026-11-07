@@ -21,7 +21,7 @@ describe('constraints', () => {
   it('locks the manifest to storage and x.com', () => {
     const manifest = JSON.parse(readFileSync(path.join(extensionDir, 'manifest.json'), 'utf8'));
     assert.equal(manifest.manifest_version, 3);
-    assert.equal(manifest.version, '1.3.2');
+    assert.equal(manifest.version, '1.4.0');
     assert.equal(typeof manifest.key, 'string');
     assert.ok(manifest.key.length > 100);
     assert.deepEqual(manifest.permissions, ['storage', 'nativeMessaging']);
@@ -101,6 +101,7 @@ describe('constraints', () => {
       'authorFlagCounts',
       'countedPostIds',
       'toneEnabled',
+      'toneLabels',
       'hiddenTones',
       'toneStatus',
     ]);
@@ -154,7 +155,8 @@ describe('constraints', () => {
     assert.match(host, /\[\[POST\]\]/);
     assert.match(host, /64 \* 1024/);
     assert.match(host, /untrusted data/);
-    assert.match(host, /LanguageModelSession\(instructions: toneInstructions\)/);
+    assert.match(host, /LanguageModelSession\(instructions: toneInstructions\(labels\)\)/);
+    assert.match(host, /anyOf: labels/);
     assert.doesNotMatch(host, /\bprint\s*\(/);
     assert.doesNotMatch(host, /FileManager/);
     assert.match(host, /tone-host: could not write a reply/);

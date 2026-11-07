@@ -1,4 +1,4 @@
-import { normalizeToneLabel, toneDisplayName } from '../tone/protocol.js';
+import { normalizeToneName, toneDisplayName } from '../tone/protocol.js';
 import { BADGE_LABELS, BADGE_PRECEDENCE, DISCLAIMER, pickBadge, sortHits } from './labels.js';
 
 const results = new WeakMap();
@@ -217,7 +217,7 @@ export function mountToneHost(article) {
 
 function paintTone(host, tone) {
   const existing = host.querySelector('.fcb-tone');
-  const label = normalizeToneLabel(tone?.label);
+  const label = normalizeToneName(tone?.label);
   const name = toneDisplayName(label);
   if (!name) {
     existing?.remove();

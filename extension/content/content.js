@@ -8,7 +8,7 @@ import { createChromeStorage, createMemoryStorage, hasChromeStorage, normalizeSt
 import { syncPostCollapse } from '../tone/filter.js';
 import { hiddenCountMessage } from '../tone/filter-ui.js';
 import { createToneMemory } from '../tone/memory.js';
-import { TONE_MESSAGE_TYPE, TONE_PAGE_PORT } from '../tone/protocol.js';
+import { TONE_MESSAGE_TYPE, TONE_PAGE_PORT, normalizeToneLabel } from '../tone/protocol.js';
 import { requestToneLabel } from '../tone/request.js';
 import { createToneController } from '../tone/viewport.js';
 
@@ -50,6 +50,7 @@ async function start(doc, options) {
   let pagePort = null;
   const revealedPosts = new Set();
   const toneMemory = options.toneMemory || createToneMemory();
+  toneMemory.useList(state.toneLabels);
   const toneController = createToneController({
     memory: toneMemory,
     delayMs: options.toneDelayMs ?? 500,
@@ -64,9 +65,11 @@ async function start(doc, options) {
       }
     },
     paint(id, label) {
+      const allowed = normalizeToneLabel(label, state.toneLabels);
+      if (!allowed) return;
       const post = findTonePost(id);
       if (!post || post.isConnected === false) return;
-      applyAsyncResult(post, { hits: [], tone: { label } });
+      applyAsyncResult(post, { hits: [], tone: { label: allowed } });
       applyHiddenTones();
     },
     observe(post, onVisible) {
@@ -83,7 +86,13 @@ async function start(doc, options) {
       return () => observer.disconnect();
     },
     send(entry) {
-      return requestToneLabel({ id: entry.id, text: entry.text, send: toneSender });
+      return requestToneLabel({
+        id: entry.id,
+        text: entry.text,
+        labels: state.toneLabels,
+        currentLabels: () => state.toneLabels,
+        send: toneSender,
+      });
     },
   });
 
@@ -106,6 +115,7 @@ async function start(doc, options) {
       type: TONE_MESSAGE_TYPE,
       id: request.id,
       text: request.text,
+      labels: request.labels,
     });
   }
 
@@ -199,6 +209,7 @@ async function start(doc, options) {
     syncPostCollapse(post, {
       label: toneMemory.get(id),
       hiddenTones: state.hiddenTones,
+      labels: state.toneLabels,
       revealed: revealedPosts,
       postId: id,
       onShow(postId) {
@@ -238,9 +249,20 @@ async function start(doc, options) {
     storage.get().then((next) => {
       const was = state.toneEnabled;
       const prevHidden = (state.hiddenTones || []).join(',');
+      const prevLabels = (state.toneLabels || []).join('\n');
       state = normalizeState(next);
+      const labelsChanged = state.toneLabels.join('\n') !== prevLabels;
+      if (labelsChanged) {
+        toneMemory.useList(state.toneLabels);
+        toneController.pause();
+        toneController.resume();
+        removeToneChips();
+        if (state.toneEnabled) rescanTone();
+      }
       if (state.toneEnabled !== was) refreshTone();
-      if ((state.hiddenTones || []).join(',') !== prevHidden) applyHiddenTones({ visibleOnly: false });
+      if (labelsChanged || (state.hiddenTones || []).join(',') !== prevHidden) {
+        applyHiddenTones({ visibleOnly: false });
+      }
     }).catch(() => {});
   });
 

@@ -1,4 +1,4 @@
-import { TONE_LABELS, normalizeToneLabel, toneDisplayName } from './protocol.js';
+import { FALLBACK_TONE, normalizeToneList, normalizeToneName, toneDisplayName } from './protocol.js';
 
 function ensurePositioned(article) {
   const inline = article.style?.position;
@@ -14,22 +14,23 @@ function ensurePositioned(article) {
   article.style.position = 'relative';
 }
 
-/** Saved hide-list. Only tone ids, in label order. Never post text. */
-export function normalizeHiddenTones(raw) {
+/** Saved hide-list. Only tone names from the current list, never neutral, never post text. */
+export function normalizeHiddenTones(raw, labels) {
+  const allowed = normalizeToneList(labels).filter((name) => name !== FALLBACK_TONE);
   const selected = new Set();
   const values = Array.isArray(raw) ? raw : [];
   for (const value of values) {
-    const label = normalizeToneLabel(value);
-    if (label) selected.add(label);
+    const name = normalizeToneName(value);
+    if (name && allowed.includes(name)) selected.add(name);
   }
-  return TONE_LABELS.map(([id]) => id).filter((id) => selected.has(id));
+  return allowed.filter((name) => selected.has(name));
 }
 
-export function shouldCollapsePost({ label, hiddenTones, revealed, postId }) {
-  const normalized = normalizeToneLabel(label);
-  if (!normalized) return false;
+export function shouldCollapsePost({ label, hiddenTones, revealed, postId, labels } = {}) {
+  const normalized = normalizeToneName(label);
+  if (!normalized || normalized === FALLBACK_TONE) return false;
   if (revealed?.has(String(postId || ''))) return false;
-  return normalizeHiddenTones(hiddenTones).includes(normalized);
+  return normalizeHiddenTones(hiddenTones, labels).includes(normalized);
 }
 
 function hiddenBar(article) {
@@ -40,9 +41,9 @@ function hiddenBar(article) {
  * Collapse or restore one article. The bar and Show button are extension elements.
  * X's own controls are left in the tree and are not clicked.
  */
-export function syncPostCollapse(article, { label, hiddenTones, revealed, postId, onShow } = {}) {
+export function syncPostCollapse(article, { label, hiddenTones, revealed, postId, onShow, labels } = {}) {
   if (!article) return false;
-  const collapse = shouldCollapsePost({ label, hiddenTones, revealed, postId });
+  const collapse = shouldCollapsePost({ label, hiddenTones, revealed, postId, labels });
   const bar = hiddenBar(article);
   if (!collapse) {
     if (bar) bar.remove();
@@ -57,7 +58,7 @@ export function syncPostCollapse(article, { label, hiddenTones, revealed, postId
   } else if (article.getAttribute?.('data-fcb-collapsed') !== '1') {
     article.setAttribute('data-fcb-collapsed', '1');
   }
-  const name = toneDisplayName(label);
+  const name = toneDisplayName(label, labels);
   const text = `Hidden: ${name}`;
   if (bar) {
     const labelNode = [...bar.children].find((el) => el.classList?.contains('fcb-hidden-label'));

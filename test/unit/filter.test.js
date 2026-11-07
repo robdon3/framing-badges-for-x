@@ -12,6 +12,7 @@ import {
   syncPostCollapse,
 } from '../../extension/tone/filter.js';
 import { bindHiddenCount, bindHiddenTones, hiddenCountLabel } from '../../extension/tone/filter-ui.js';
+import { DEFAULT_TONE_LABELS } from '../../extension/tone/protocol.js';
 import { createToneController } from '../../extension/tone/viewport.js';
 
 function articleWithAction() {
@@ -319,5 +320,88 @@ describe('tone filter', () => {
     assert.equal(fresh.querySelector('.fcb-hidden-bar'), null);
     assert.equal(fresh.getAttribute('data-fcb-collapsed'), null);
     assert.equal(clicks, 0);
+  });
+
+  it('round-trips a custom tone list and rejects bad names', async () => {
+    const { document } = parseHTML('<div id="root"></div>');
+    let stored = {};
+    const chromeApi = {
+      storage: {
+        local: {
+          async get() { return structuredClone(stored); },
+          async set(patch) { stored = { ...stored, ...patch }; },
+        },
+        onChanged: { addListener() {} },
+      },
+    };
+    const container = document.querySelector('#root');
+    bindHiddenTones({ container, chromeApi });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(container.querySelector('input[value="neutral"]').disabled, true);
+    assert.equal(container.querySelector('[aria-label="Remove neutral"]'), null);
+    const form = container.querySelector('form');
+    const field = container.querySelector('input[aria-label="New tone"]');
+    const error = container.querySelector('.tone-error');
+    field.value = 'Hopeful';
+    form.dispatchEvent(new document.defaultView.Event('submit', { bubbles: true, cancelable: true }));
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(stored.toneLabels, [...DEFAULT_TONE_LABELS.slice(0, -1), 'hopeful', 'neutral']);
+    assert.equal(container.querySelector('input[value="hopeful"]') != null, true);
+    assert.equal(container.querySelector('[aria-label="Remove hopeful"]').textContent, 'x');
+    assert.equal(error.textContent, '');
+
+    field.value = '<b>no</b>';
+    form.dispatchEvent(new document.defaultView.Event('submit', { bubbles: true, cancelable: true }));
+    assert.match(error.textContent, /letters, digits/);
+    field.value = 'a'.repeat(25);
+    form.dispatchEvent(new document.defaultView.Event('submit', { bubbles: true, cancelable: true }));
+    assert.equal(error.textContent, 'Use 24 characters or fewer.');
+    field.value = 'fun\u0001';
+    form.dispatchEvent(new document.defaultView.Event('submit', { bubbles: true, cancelable: true }));
+    assert.match(error.textContent, /letters, digits/);
+    const before = stored.toneLabels.join(',');
+    assert.equal(stored.toneLabels.join(','), before);
+
+    container.querySelector('[aria-label="Remove hopeful"]').click();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(stored.toneLabels.includes('hopeful'), false);
+    container.querySelector('.tone-reset').click();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(stored.toneLabels, [...DEFAULT_TONE_LABELS]);
+    assert.equal(JSON.stringify(stored).includes('<b>'), false);
+  });
+
+  it('forgets a cached label and rescores the visible post when the tone list changes', async () => {
+    installObservers();
+    const { document } = parseHTML(`<html><body>
+      <article data-testid="tweet">
+        <div data-testid="tweetText">Here is the meeting agenda for Thursday.</div>
+        <div data-testid="User-Name"><span>@tone_user</span></div>
+        <a href="/tone_user/status/42"><time datetime="2026-11-07T12:00:00.000Z">now</time></a>
+      </article>
+    </body></html>`);
+    const storage = createMemoryStorage({ toneEnabled: true });
+    const sent = [];
+    await startFramingBadges(document, {
+      storage,
+      debounceMs: 0,
+      immediate: true,
+      now: () => NOW,
+      toneDelayMs: 0,
+      toneSend: async (request) => {
+        sent.push(request.labels.join(','));
+        return { id: request.id, label: sent.length === 1 ? 'fun' : 'hopeful', ms: 1 };
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    assert.equal(document.querySelector('.fcb-tone').textContent, 'Fun');
+    assert.equal(sent.length, 1);
+    await storage.set({ toneLabels: ['hopeful', 'neutral'] });
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    assert.equal(sent.length, 2);
+    assert.equal(sent[1].includes('hopeful'), true);
+    assert.equal(document.querySelector('.fcb-tone').textContent, 'Hopeful');
+    const saved = await storage.get();
+    assert.equal(JSON.stringify(saved).includes('meeting agenda'), false);
   });
 });

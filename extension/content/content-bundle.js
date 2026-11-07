@@ -15,17 +15,20 @@
   // extension/tone/protocol.js
   var TONE_TEXT_LIMIT = 1e3;
   var TONE_MESSAGE_TYPE = "fcb-tone";
-  var TONE_LABELS = Object.freeze([
-    ["whining", "Whining"],
-    ["fun", "Fun"],
-    ["sad", "Sad"],
-    ["angry", "Angry"],
-    ["hype", "Hype"],
-    ["sarcastic", "Sarcastic"],
-    ["informative", "Informative"],
-    ["neutral", "Neutral"]
+  var FALLBACK_TONE = "neutral";
+  var TONE_NAME_MAX = 24;
+  var TONE_LIST_MAX = 12;
+  var DEFAULT_TONE_LABELS = Object.freeze([
+    "whining",
+    "fun",
+    "sad",
+    "angry",
+    "hype",
+    "sarcastic",
+    "informative",
+    "neutral"
   ]);
-  var LABEL_SET = new Set(TONE_LABELS.map(([id]) => id));
+  var TONE_NAME_CHARS = /[\u0000-\u001F\u007F\u00AD\u061C\u180E\u200B-\u200F\u2028\u2029\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/;
   var TONE_OFF_STATUS = Object.freeze({ code: "off", message: "Tone check is off." });
   var TONE_PAGE_PORT = "fcb-tone-page";
   var TONE_ARMED_STATUS = Object.freeze({
@@ -67,14 +70,47 @@
     "Tone host timed out."
   ]));
   var STRIPPED_CHARS = /[\u0000-\u001F\u007F\u00AD\u061C\u180E\u200B-\u200F\u2028\u2029\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g;
-  function normalizeToneLabel(label) {
-    const value = String(label ?? "").trim().toLowerCase();
-    return LABEL_SET.has(value) ? value : null;
+  function normalizeToneName(raw) {
+    const text = String(raw ?? "").replace(/’/g, "'");
+    if (TONE_NAME_CHARS.test(text)) return null;
+    const value = text.trim().toLowerCase().replace(/[ \t]+/g, " ");
+    if (!value || [...value].length > TONE_NAME_MAX) return null;
+    if (!/^[a-z0-9]+(?:[ '\-][a-z0-9]+)*$/.test(value)) return null;
+    return value;
   }
-  function toneDisplayName(label) {
-    const normalized = normalizeToneLabel(label);
-    if (!normalized) return null;
-    return TONE_LABELS.find(([id]) => id === normalized)[1];
+  function normalizeToneList(raw) {
+    if (!Array.isArray(raw)) return [...DEFAULT_TONE_LABELS];
+    const out = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const item of raw) {
+      const name = normalizeToneName(item);
+      if (!name || name === FALLBACK_TONE || seen.has(name)) continue;
+      if (out.length >= TONE_LIST_MAX) continue;
+      seen.add(name);
+      out.push(name);
+    }
+    out.push(FALLBACK_TONE);
+    return out;
+  }
+  function hashToneList(raw) {
+    const joined = normalizeToneList(raw).join("\n");
+    let hash = 2166136261;
+    for (let i = 0; i < joined.length; i += 1) {
+      hash ^= joined.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(16);
+  }
+  function normalizeToneLabel(label, list) {
+    const name = normalizeToneName(label);
+    if (!name) return null;
+    return normalizeToneList(list).includes(name) ? name : null;
+  }
+  function toneDisplayName(label, list) {
+    const name = normalizeToneName(label);
+    if (!name) return null;
+    if (list !== void 0 && !normalizeToneList(list).includes(name)) return null;
+    return name.replace(/(^|[\s-])([a-z0-9])/g, (_, sep, ch) => `${sep}${ch.toUpperCase()}`);
   }
   function normalizeToneError(error) {
     const text = String(error ?? "").replace(/\s+/g, " ").trim();
@@ -97,13 +133,14 @@
   function truncateToneText(text) {
     return sanitizeToneText(text);
   }
-  function frameToneRequest(id, text) {
+  function frameToneRequest(id, text, labels) {
     return {
       id: id == null ? "" : String(id),
-      text: truncateToneText(text)
+      text: truncateToneText(text),
+      labels: normalizeToneList(labels)
     };
   }
-  function parseHostMessage(message) {
+  function parseHostMessage(message, labels) {
     if (!message || typeof message !== "object") {
       return { id: "", error: "Tone host disconnected." };
     }
@@ -111,7 +148,9 @@
     if (message.error) {
       return { id, error: normalizeToneError(message.error) };
     }
-    const label = normalizeToneLabel(message.label) || "neutral";
+    const allowed = normalizeToneList(labels === void 0 ? void 0 : labels);
+    const name = normalizeToneName(message.label);
+    const label = name && allowed.includes(name) ? name : FALLBACK_TONE;
     const ms = Number(message.ms);
     return {
       id,
@@ -350,7 +389,7 @@
   }
   function paintTone(host, tone) {
     const existing = host.querySelector(".fcb-tone");
-    const label = normalizeToneLabel(tone?.label);
+    const label = normalizeToneName(tone?.label);
     const name = toneDisplayName(label);
     if (!name) {
       existing?.remove();
@@ -1392,27 +1431,28 @@ ${cardText}`),
     if (article.dataset) article.dataset.fcbPositioned = "static";
     article.style.position = "relative";
   }
-  function normalizeHiddenTones(raw) {
+  function normalizeHiddenTones(raw, labels) {
+    const allowed = normalizeToneList(labels).filter((name) => name !== FALLBACK_TONE);
     const selected = /* @__PURE__ */ new Set();
     const values = Array.isArray(raw) ? raw : [];
     for (const value of values) {
-      const label = normalizeToneLabel(value);
-      if (label) selected.add(label);
+      const name = normalizeToneName(value);
+      if (name && allowed.includes(name)) selected.add(name);
     }
-    return TONE_LABELS.map(([id]) => id).filter((id) => selected.has(id));
+    return allowed.filter((name) => selected.has(name));
   }
-  function shouldCollapsePost({ label, hiddenTones, revealed, postId }) {
-    const normalized = normalizeToneLabel(label);
-    if (!normalized) return false;
+  function shouldCollapsePost({ label, hiddenTones, revealed, postId, labels } = {}) {
+    const normalized = normalizeToneName(label);
+    if (!normalized || normalized === FALLBACK_TONE) return false;
     if (revealed?.has(String(postId || ""))) return false;
-    return normalizeHiddenTones(hiddenTones).includes(normalized);
+    return normalizeHiddenTones(hiddenTones, labels).includes(normalized);
   }
   function hiddenBar(article) {
     return [...article.children].find((el) => el.classList?.contains("fcb-hidden-bar")) || null;
   }
-  function syncPostCollapse(article, { label, hiddenTones, revealed, postId, onShow } = {}) {
+  function syncPostCollapse(article, { label, hiddenTones, revealed, postId, onShow, labels } = {}) {
     if (!article) return false;
-    const collapse = shouldCollapsePost({ label, hiddenTones, revealed, postId });
+    const collapse = shouldCollapsePost({ label, hiddenTones, revealed, postId, labels });
     const bar = hiddenBar(article);
     if (!collapse) {
       if (bar) bar.remove();
@@ -1426,7 +1466,7 @@ ${cardText}`),
     } else if (article.getAttribute?.("data-fcb-collapsed") !== "1") {
       article.setAttribute("data-fcb-collapsed", "1");
     }
-    const name = toneDisplayName(label);
+    const name = toneDisplayName(label, labels);
     const text = `Hidden: ${name}`;
     if (bar) {
       const labelNode2 = [...bar.children].find((el) => el.classList?.contains("fcb-hidden-label"));
@@ -1468,6 +1508,7 @@ ${cardText}`),
     "authorFlagCounts",
     "countedPostIds",
     "toneEnabled",
+    "toneLabels",
     "hiddenTones",
     "toneStatus"
   ]);
@@ -1477,6 +1518,7 @@ ${cardText}`),
     authorFlagCounts: {},
     countedPostIds: [],
     toneEnabled: false,
+    toneLabels: normalizeToneList(),
     hiddenTones: [],
     toneStatus: { code: TONE_OFF_STATUS.code, message: TONE_OFF_STATUS.message }
   };
@@ -1507,7 +1549,8 @@ ${cardText}`),
       authorFlagCounts,
       countedPostIds,
       toneEnabled: raw?.toneEnabled === true,
-      hiddenTones: normalizeHiddenTones(raw?.hiddenTones),
+      toneLabels: normalizeToneList(raw?.toneLabels),
+      hiddenTones: normalizeHiddenTones(raw?.hiddenTones, normalizeToneList(raw?.toneLabels)),
       toneStatus: normalizeToneStatus(raw?.toneStatus)
     };
   }
@@ -1597,28 +1640,51 @@ ${cardText}`),
   function createToneMemory(cap = TONE_MEMORY_CAP) {
     const limit = Math.max(1, cap);
     const labels = /* @__PURE__ */ new Map();
+    let listHash = hashToneList();
+    let allowed = new Set(normalizeToneList());
+    function storageKey(id) {
+      return `${listHash}:${id}`;
+    }
     function touch(id, label) {
-      labels.delete(id);
-      labels.set(id, label);
+      const key = storageKey(id);
+      labels.delete(key);
+      labels.set(key, label);
       while (labels.size > limit) {
         const oldest = labels.keys().next().value;
         labels.delete(oldest);
       }
     }
     return {
+      useList(list) {
+        const normalized = normalizeToneList(list);
+        const next = hashToneList(normalized);
+        if (next !== listHash) {
+          labels.clear();
+          listHash = next;
+          allowed = new Set(normalized);
+        }
+        return listHash;
+      },
+      get hash() {
+        return listHash;
+      },
       get(id) {
-        const key = String(id || "");
+        const key = storageKey(String(id || ""));
         if (!labels.has(key)) return null;
         const label = labels.get(key);
-        touch(key, label);
+        touch(String(id || ""), label);
         return label;
       },
       set(id, label) {
         const key = String(id || "");
-        const normalized = normalizeToneLabel(label);
-        if (!key || !normalized) return false;
-        touch(key, normalized);
+        const name = normalizeToneName(label);
+        if (!key || !name || name === "" || !allowed.has(name)) return false;
+        if (name !== FALLBACK_TONE && !allowed.has(name)) return false;
+        touch(key, name);
         return true;
+      },
+      clear() {
+        labels.clear();
       },
       get size() {
         return labels.size;
@@ -1627,8 +1693,8 @@ ${cardText}`),
   }
 
   // extension/tone/request.js
-  async function requestToneLabel({ id, text, send }) {
-    const request = frameToneRequest(id, text);
+  async function requestToneLabel({ id, text, labels, currentLabels, send }) {
+    const request = frameToneRequest(id, text, labels);
     try {
       if (!request.id || !request.text) return { label: null };
       let response;
@@ -1637,7 +1703,8 @@ ${cardText}`),
       } catch {
         return { label: null, error: "Tone host disconnected." };
       }
-      const parsed = parseHostMessage(response);
+      const allow = typeof currentLabels === "function" ? currentLabels() : currentLabels;
+      const parsed = parseHostMessage(response, allow === void 0 ? request.labels : allow);
       if (parsed.id !== request.id) return { label: null };
       if (!parsed.label) return { label: null, error: parsed.error };
       return { label: parsed.label, ms: parsed.ms };
@@ -1763,9 +1830,10 @@ ${cardText}`),
           } finally {
             payload.text = "";
           }
-          if (result?.label) memory.set(payload.id, result.label);
+          if (result?.label && memory.set(payload.id, result.label)) {
+            if (!paused) paint2?.(payload.id, result.label);
+          }
           if (paused) break;
-          if (result?.label) paint2?.(payload.id, result.label);
         }
       } finally {
         sending = false;
@@ -1892,6 +1960,7 @@ ${cardText}`),
     let pagePort = null;
     const revealedPosts = /* @__PURE__ */ new Set();
     const toneMemory = options.toneMemory || createToneMemory();
+    toneMemory.useList(state.toneLabels);
     const toneController = createToneController({
       memory: toneMemory,
       delayMs: options.toneDelayMs ?? 500,
@@ -1906,9 +1975,11 @@ ${cardText}`),
         }
       },
       paint(id, label) {
+        const allowed = normalizeToneLabel(label, state.toneLabels);
+        if (!allowed) return;
         const post = findTonePost(id);
         if (!post || post.isConnected === false) return;
-        applyAsyncResult(post, { hits: [], tone: { label } });
+        applyAsyncResult(post, { hits: [], tone: { label: allowed } });
         applyHiddenTones();
       },
       observe(post, onVisible) {
@@ -1926,7 +1997,13 @@ ${cardText}`),
         return () => observer.disconnect();
       },
       send(entry) {
-        return requestToneLabel({ id: entry.id, text: entry.text, send: toneSender });
+        return requestToneLabel({
+          id: entry.id,
+          text: entry.text,
+          labels: state.toneLabels,
+          currentLabels: () => state.toneLabels,
+          send: toneSender
+        });
       }
     });
     function findTonePost(id) {
@@ -1946,7 +2023,8 @@ ${cardText}`),
       return chromeApi.runtime.sendMessage({
         type: TONE_MESSAGE_TYPE,
         id: request.id,
-        text: request.text
+        text: request.text,
+        labels: request.labels
       });
     }
     function syncPagePort() {
@@ -2031,6 +2109,7 @@ ${cardText}`),
       syncPostCollapse(post, {
         label: toneMemory.get(id),
         hiddenTones: state.hiddenTones,
+        labels: state.toneLabels,
         revealed: revealedPosts,
         postId: id,
         onShow(postId) {
@@ -2065,9 +2144,20 @@ ${cardText}`),
       storage.get().then((next) => {
         const was = state.toneEnabled;
         const prevHidden = (state.hiddenTones || []).join(",");
+        const prevLabels = (state.toneLabels || []).join("\n");
         state = normalizeState(next);
+        const labelsChanged = state.toneLabels.join("\n") !== prevLabels;
+        if (labelsChanged) {
+          toneMemory.useList(state.toneLabels);
+          toneController.pause();
+          toneController.resume();
+          removeToneChips();
+          if (state.toneEnabled) rescanTone();
+        }
         if (state.toneEnabled !== was) refreshTone();
-        if ((state.hiddenTones || []).join(",") !== prevHidden) applyHiddenTones({ visibleOnly: false });
+        if (labelsChanged || (state.hiddenTones || []).join(",") !== prevHidden) {
+          applyHiddenTones({ visibleOnly: false });
+        }
       }).catch(() => {
       });
     });

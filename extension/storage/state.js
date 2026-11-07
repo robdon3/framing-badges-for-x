@@ -1,6 +1,6 @@
 import { authorKey, normalizeHandle } from '../rules/sources.js';
 import { normalizeHiddenTones } from '../tone/filter.js';
-import { TONE_OFF_STATUS, normalizeToneStatus } from '../tone/protocol.js';
+import { TONE_OFF_STATUS, normalizeToneList, normalizeToneStatus } from '../tone/protocol.js';
 
 export const MAX_HANDLES = 500;
 export const COUNTED_ID_CAP = 2000;
@@ -11,6 +11,7 @@ export const STORAGE_KEYS = Object.freeze([
   'authorFlagCounts',
   'countedPostIds',
   'toneEnabled',
+  'toneLabels',
   'hiddenTones',
   'toneStatus',
 ]);
@@ -21,6 +22,7 @@ export const DEFAULT_STATE = {
   authorFlagCounts: {},
   countedPostIds: [],
   toneEnabled: false,
+  toneLabels: normalizeToneList(),
   hiddenTones: [],
   toneStatus: { code: TONE_OFF_STATUS.code, message: TONE_OFF_STATUS.message },
 };
@@ -55,7 +57,8 @@ export function normalizeState(raw) {
     authorFlagCounts,
     countedPostIds,
     toneEnabled: raw?.toneEnabled === true,
-    hiddenTones: normalizeHiddenTones(raw?.hiddenTones),
+    toneLabels: normalizeToneList(raw?.toneLabels),
+    hiddenTones: normalizeHiddenTones(raw?.hiddenTones, normalizeToneList(raw?.toneLabels)),
     toneStatus: normalizeToneStatus(raw?.toneStatus),
   };
 }

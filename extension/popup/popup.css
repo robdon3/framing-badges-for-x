@@ -45,10 +45,26 @@ p { margin: 0 0 12px; }
   font-weight: 650;
 }
 
-#hidden-tones {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px 8px;
+.tone-note {
+  margin: 0 0 8px;
+  color: #57534e;
+  font-size: 12px;
+}
+
+.tone-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow: auto;
+  margin: 0 0 8px;
+}
+
+.tone-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .hide-tone {
@@ -58,6 +74,48 @@ p { margin: 0 0 12px; }
   margin: 0;
   font-weight: 500;
   font-size: 13px;
+}
+
+.add-tone {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 6px;
+}
+
+.add-tone input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #d6d3d1;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font: 14px system-ui, sans-serif;
+}
+
+.add-tone button,
+.tone-remove,
+.tone-reset {
+  width: auto;
+}
+
+.tone-remove {
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: transparent;
+  color: #57534e;
+  font-size: 13px;
+}
+
+.tone-error {
+  min-height: 1.2em;
+  margin: 0 0 8px;
+  color: #9f1239;
+  font-size: 12px;
+}
+
+.tone-reset {
+  margin: 0 0 8px;
+  background: #e7e5e4;
+  color: #1c1917;
 }
 
 #hidden-count {

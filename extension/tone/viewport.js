@@ -87,9 +87,10 @@ export function createToneController({
         } finally {
           payload.text = '';
         }
-        if (result?.label) memory.set(payload.id, result.label);
+        if (result?.label && memory.set(payload.id, result.label)) {
+          if (!paused) paint?.(payload.id, result.label);
+        }
         if (paused) break;
-        if (result?.label) paint?.(payload.id, result.label);
       }
     } finally {
       sending = false;

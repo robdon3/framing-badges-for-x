@@ -117,7 +117,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type !== TONE_MESSAGE_TYPE) return false;
   if (sender?.id !== chrome.runtime.id) return false;
-  const request = frameToneRequest(message.id, message.text);
+  const request = frameToneRequest(message.id, message.text, message.labels);
   if (message && typeof message === 'object') message.text = '';
   lifetime.request(request).then(async (result) => {
     if (result.error && result.error !== TONE_OFF_STATUS.message) {

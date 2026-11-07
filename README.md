@@ -22,7 +22,7 @@ The same folder is zipped at `dist/x-framing-badges.zip` (files at the archive r
 
 ## Tone check on a Mac (optional)
 
-v1.3 can show a smaller tone chip beside a framing badge, or on its own when no framing rule fired. The labels are whining, fun, sad, angry, hype, sarcastic, informative, and neutral. The model is Apple's on-device Foundation Model, reached through Chrome native messaging. Post text is not written to disk and is not sent to a server. The framing badge is still the rules engine above.
+The tone chip sits beside a framing badge, or on its own when no framing rule fired. You choose the tone names. The first list is whining, fun, sad, angry, hype, sarcastic, informative, and neutral. Neutral always stays, and it cannot be hidden. The model is Apple's on-device Foundation Model, reached through Chrome native messaging. Post text is not written to disk and is not sent to a server. The framing badge is still the rules engine above.
 
 This needs a Mac where Apple Intelligence is already available (checked on macOS 27 with the command-line tools, not the Xcode app). The helper does not build on Linux.
 
@@ -48,7 +48,7 @@ Then:
 2. Open the toolbar popup or the options page.
 3. Turn on **Tone check (on-device Apple model)**. It is off by default.
 4. Scroll `https://x.com` or `https://pro.x.com`. A post that stays in the viewport for about half a second gets a tone chip. If a framing rule also fired, the chip sits beside that badge. On X Pro, each column is watched on its own. A label from this page load can show again without asking the model. Reload the page and the labels are gone.
-5. Under **Hide these tones**, check any labels you do not want to read. Those posts collapse to a thin bar, `Hidden: <label>`, with a **Show** button that reveals that one post until you refresh. Unchecking a tone brings those posts back immediately. The popup says `Hidden this page: N`.
+5. In the popup, under **Tones**, type a name and press Add (Enter works too). A name can be letters, digits, spaces, hyphens, and apostrophes, up to 24 characters. You can keep 12 tones plus neutral. Check Hide to collapse those posts to a thin bar, `Hidden: <tone>`, with a **Show** button that reveals that one post until you refresh. Unchecking a tone brings those posts back immediately. Neutral cannot be removed or hidden. **Reset to defaults** restores the original eight. The popup says `Hidden this page: N`. Changing the list forgets labels from the old list and scores the posts that are on screen again.
 
 If the helper is missing or the model is unavailable, no tone chip is shown. The popup status line says `Tone host not installed`, or the reason the on-device model is unavailable.
 
@@ -103,7 +103,7 @@ Standards mapping, in short: this build never assigns “verified.” Claim is t
 - Permissions are `storage`, `nativeMessaging`, and host access to `https://x.com/*`, `https://www.x.com/*`, and `https://pro.x.com/*`. Nothing else. `nativeMessaging` talks only to the local tone helper, and only while Tone check is on.
 - Post text is not saved. It is not written to `chrome.storage` (local, sync, or session), `localStorage`, IndexedDB, or cookies. The badge, tooltip, and hidden bar use fixed wording, not the post. The extension does not log the post.
 - The tone helper reads post text from Chrome's native-messaging pipe, classifies it, and drops it. It does not write that text to disk, stderr, or a file. A reply is `{id, label, ms}` or `{id, error}` with a fixed error string.
-- While a request is in flight, the text sits only in that request. After the send, that copy is cleared. The in-memory label map is post id to one of the eight tone labels. It does not hold text, and a refresh drops it.
+- While a request is in flight, the text sits only in that request. After the send, that copy is cleared. The in-memory label map is post id plus the current tone list, and the value is one tone name from that list. It does not hold text, and a refresh drops it. The saved settings are the tone list and the hide list, not post text.
 - Extension pages use a CSP of `default-src 'none'` with local scripts and styles only.
 - Handles, lists, flag counts, the tone on/off switch, the hide list, and a fixed status line stay in `chrome.storage.local` on this profile. Tone labels do not.
 - Badge CSS is limited to `.fcb-` classes so it does not restyle the site. The badge is `position: absolute`, so it does not push the post text. If a post’s computed position is `static`, the article gets `position: relative` so the badge has a box to sit in.
@@ -113,7 +113,7 @@ Standards mapping, in short: this build never assigns “verified.” Claim is t
 A post is untrusted text. The tone check treats it as data, not as instructions.
 
 - The helper's instructions stay fixed and separate from the post. The post is wrapped between `[[POST]]` and `[[/POST]]`, after control characters, zero-width characters, bidi overrides, and those delimiter marks are stripped. The text is capped at about 1000 characters.
-- The model may only return one of: whining, fun, sad, angry, hype, sarcastic, informative, neutral. Anything else, including a reply that tries to say something else, becomes neutral. The extension checks the reply again. A label off that list becomes neutral. A reply whose id does not match the request is ignored.
+- Each request sends `{id, text, labels}`. `labels` is the current tone list, including neutral. The host checks those names again and uses them as the only allowed answers. Anything else becomes neutral. The extension checks the reply against the list that is current when the reply arrives. A reply whose id does not match the request is ignored.
 - Each request starts a new Foundation Models session, so one post's text is not left in the next post's transcript.
 - Frames larger than 64KB are rejected without being read. Malformed JSON gets a generic error and is not sent to the model.
 - The native host manifest allows only this extension's id, `chrome-extension://eadkmedlbenoalongikmdhedfinggpoh/`.
@@ -126,7 +126,7 @@ There is still no “check this post” button and no network permission. The op
 - `collectAsyncResult()` / `scorePostWithAsync()` in `extension/content/scorer.js`
 - `applyAsyncResult()` in `extension/content/badge.js` paints a separate `.fcb-tone` chip. Framing precedence is unchanged, and the framing tooltip stays on the rules result.
 
-The content script asks only for a post that is in the viewport (each X Pro column has its own scroll root) and has stayed there for about 500ms. If it scrolls away before that request is sent, it is dropped. The waiting list is at most 10 posts, newest visible first. One request runs at a time. Labels are an in-memory map of post id to one of the eight labels, capped at 300, and they disappear on refresh. Post text is cleared after the send. It is not written to disk.
+The content script asks only for a post that is in the viewport (each X Pro column has its own scroll root) and has stayed there for about 500ms. If it scrolls away before that request is sent, it is dropped. The waiting list is at most 10 posts, newest visible first. One request runs at a time. Labels are an in-memory map of post id and tone-list hash to one name from that list, capped at 300, and they disappear on refresh or when the list changes. Post text is cleared after the send. It is not written to disk.
 
 The service worker opens `connectNative` to `com.xframingbadges.tone` on the first request and closes it after about 60 seconds with nothing to do, when Tone check is turned off, or when no x.com tab is open. Each request starts a new Foundation Models session so the transcript does not grow. Closing the port lets the helper process and its model memory exit.
 

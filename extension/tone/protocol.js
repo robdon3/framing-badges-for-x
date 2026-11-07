@@ -4,18 +4,23 @@ export const HOST_NAME = 'com.xframingbadges.tone';
 export const TONE_TEXT_LIMIT = 1000;
 export const TONE_MESSAGE_TYPE = 'fcb-tone';
 
-export const TONE_LABELS = Object.freeze([
-  ['whining', 'Whining'],
-  ['fun', 'Fun'],
-  ['sad', 'Sad'],
-  ['angry', 'Angry'],
-  ['hype', 'Hype'],
-  ['sarcastic', 'Sarcastic'],
-  ['informative', 'Informative'],
-  ['neutral', 'Neutral'],
+export const FALLBACK_TONE = 'neutral';
+export const TONE_NAME_MAX = 24;
+export const TONE_LIST_MAX = 12;
+
+/** First-run list. Neutral stays last and cannot be removed. */
+export const DEFAULT_TONE_LABELS = Object.freeze([
+  'whining',
+  'fun',
+  'sad',
+  'angry',
+  'hype',
+  'sarcastic',
+  'informative',
+  'neutral',
 ]);
 
-const LABEL_SET = new Set(TONE_LABELS.map(([id]) => id));
+const TONE_NAME_CHARS = /[\u0000-\u001F\u007F\u00AD\u061C\u180E\u200B-\u200F\u2028\u2029\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/;
 
 export const TONE_OFF_STATUS = Object.freeze({ code: 'off', message: 'Tone check is off.' });
 export const TONE_PAGE_PORT = 'fcb-tone-page';
@@ -65,15 +70,68 @@ export const FIXED_TONE_MESSAGES = Object.freeze(new Set([
 
 const STRIPPED_CHARS = /[\u0000-\u001F\u007F\u00AD\u061C\u180E\u200B-\u200F\u2028\u2029\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g;
 
-export function normalizeToneLabel(label) {
-  const value = String(label ?? '').trim().toLowerCase();
-  return LABEL_SET.has(value) ? value : null;
+/** One tone name, or null when it breaks the rules. Control characters are rejected, not stripped. */
+export function normalizeToneName(raw) {
+  const text = String(raw ?? '').replace(/’/g, "'");
+  if (TONE_NAME_CHARS.test(text)) return null;
+  const value = text.trim().toLowerCase().replace(/[ \t]+/g, ' ');
+  if (!value || [...value].length > TONE_NAME_MAX) return null;
+  if (!/^[a-z0-9]+(?:[ '\-][a-z0-9]+)*$/.test(value)) return null;
+  return value;
 }
 
-export function toneDisplayName(label) {
-  const normalized = normalizeToneLabel(label);
-  if (!normalized) return null;
-  return TONE_LABELS.find(([id]) => id === normalized)[1];
+/** At most 12 tones, then neutral. Missing input is the default list. Invalid names are dropped. */
+export function normalizeToneList(raw) {
+  if (!Array.isArray(raw)) return [...DEFAULT_TONE_LABELS];
+  const out = [];
+  const seen = new Set();
+  for (const item of raw) {
+    const name = normalizeToneName(item);
+    if (!name || name === FALLBACK_TONE || seen.has(name)) continue;
+    if (out.length >= TONE_LIST_MAX) continue;
+    seen.add(name);
+    out.push(name);
+  }
+  out.push(FALLBACK_TONE);
+  return out;
+}
+
+export function hashToneList(raw) {
+  const joined = normalizeToneList(raw).join('\n');
+  let hash = 2166136261;
+  for (let i = 0; i < joined.length; i += 1) {
+    hash ^= joined.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16);
+}
+
+/** Plain reason for the popup, or '' when the name can be added. */
+export function explainToneRejection(raw, list) {
+  const text = String(raw ?? '');
+  if (TONE_NAME_CHARS.test(text)) return 'Use letters, digits, spaces, hyphens, and apostrophes.';
+  const value = text.trim().toLowerCase().replace(/[ \t]+/g, ' ').replace(/’/g, "'");
+  if (!value) return 'Enter a tone.';
+  if ([...value].length > TONE_NAME_MAX) return 'Use 24 characters or fewer.';
+  const name = normalizeToneName(text);
+  if (!name) return 'Use letters, digits, spaces, hyphens, and apostrophes.';
+  const current = normalizeToneList(list);
+  if (current.includes(name)) return name === FALLBACK_TONE ? 'Neutral stays on the list.' : 'That tone is already on the list.';
+  if (current.length > TONE_LIST_MAX) return 'You can add 12 tones plus neutral.';
+  return '';
+}
+
+export function normalizeToneLabel(label, list) {
+  const name = normalizeToneName(label);
+  if (!name) return null;
+  return normalizeToneList(list).includes(name) ? name : null;
+}
+
+export function toneDisplayName(label, list) {
+  const name = normalizeToneName(label);
+  if (!name) return null;
+  if (list !== undefined && !normalizeToneList(list).includes(name)) return null;
+  return name.replace(/(^|[\s-])([a-z0-9])/g, (_, sep, ch) => `${sep}${ch.toUpperCase()}`);
 }
 
 export function normalizeToneError(error) {
@@ -102,14 +160,15 @@ export function truncateToneText(text) {
 }
 
 /** JSON body the host expects. Chrome adds the 4-byte length frame. */
-export function frameToneRequest(id, text) {
+export function frameToneRequest(id, text, labels) {
   return {
     id: id == null ? '' : String(id),
     text: truncateToneText(text),
+    labels: normalizeToneList(labels),
   };
 }
 
-export function parseHostMessage(message) {
+export function parseHostMessage(message, labels) {
   if (!message || typeof message !== 'object') {
     return { id: '', error: 'Tone host disconnected.' };
   }
@@ -117,7 +176,9 @@ export function parseHostMessage(message) {
   if (message.error) {
     return { id, error: normalizeToneError(message.error) };
   }
-  const label = normalizeToneLabel(message.label) || 'neutral';
+  const allowed = normalizeToneList(labels === undefined ? undefined : labels);
+  const name = normalizeToneName(message.label);
+  const label = name && allowed.includes(name) ? name : FALLBACK_TONE;
   const ms = Number(message.ms);
   return {
     id,
