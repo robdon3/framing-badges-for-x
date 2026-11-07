@@ -1382,17 +1382,22 @@ ${cardText}`),
     const collapse = shouldCollapsePost({ label, hiddenTones, revealed, postId });
     const bar = hiddenBar(article);
     if (!collapse) {
-      bar?.remove();
-      article.classList?.remove("fcb-collapsed");
+      if (bar) bar.remove();
+      if (article.dataset?.fcbCollapsed) delete article.dataset.fcbCollapsed;
+      if (article.classList?.contains("fcb-collapsed")) article.classList.remove("fcb-collapsed");
       return false;
     }
     ensurePositioned2(article);
-    article.classList.add("fcb-collapsed");
+    if (article.dataset) {
+      if (article.dataset.fcbCollapsed !== "1") article.dataset.fcbCollapsed = "1";
+    } else if (article.getAttribute?.("data-fcb-collapsed") !== "1") {
+      article.setAttribute("data-fcb-collapsed", "1");
+    }
     const name = toneDisplayName(label);
     const text = `Hidden: ${name}`;
     if (bar) {
       const labelNode2 = [...bar.children].find((el) => el.classList?.contains("fcb-hidden-label"));
-      if (labelNode2) labelNode2.textContent = text;
+      if (labelNode2 && labelNode2.textContent !== text) labelNode2.textContent = text;
       return true;
     }
     const doc = article.ownerDocument;
@@ -1955,22 +1960,26 @@ ${cardText}`),
         if (post.dataset?.fcbScored !== "1") continue;
         armTone(post);
       }
+      applyHiddenTones();
     }
-    function applyHiddenTones() {
-      for (const post of findPosts(doc.body || doc)) {
-        const id = post.dataset?.fcbPostId;
-        if (!id) continue;
-        syncPostCollapse(post, {
-          label: toneMemory.get(id),
-          hiddenTones: state.hiddenTones,
-          revealed: revealedPosts,
-          postId: id,
-          onShow(postId) {
-            revealedPosts.add(String(postId));
-            applyHiddenTones();
-          }
-        });
-      }
+    function collapsePost(post, visibleOnly = true) {
+      const id = post?.dataset?.fcbPostId;
+      if (!id) return;
+      if (visibleOnly && !roughlyInView(post)) return;
+      syncPostCollapse(post, {
+        label: toneMemory.get(id),
+        hiddenTones: state.hiddenTones,
+        revealed: revealedPosts,
+        postId: id,
+        onShow(postId) {
+          revealedPosts.add(String(postId));
+          applyHiddenTones();
+        }
+      });
+    }
+    function applyHiddenTones(options2 = {}) {
+      const visibleOnly = options2.visibleOnly !== false;
+      for (const post of findPosts(doc.body || doc)) collapsePost(post, visibleOnly);
       reportHiddenCount();
     }
     function reportHiddenCount() {
@@ -1996,7 +2005,7 @@ ${cardText}`),
         const prevHidden = (state.hiddenTones || []).join(",");
         state = normalizeState(next);
         if (state.toneEnabled !== was) refreshTone();
-        if ((state.hiddenTones || []).join(",") !== prevHidden) applyHiddenTones();
+        if ((state.hiddenTones || []).join(",") !== prevHidden) applyHiddenTones({ visibleOnly: false });
       }).catch(() => {
       });
     });
@@ -2050,6 +2059,7 @@ ${cardText}`),
         post.dataset.fcbPostId = String(snapshot.id);
         post.dataset.fcbScored = "1";
       }
+      collapsePost(post, false);
       armTone(post);
     }
     const queue = [];
@@ -2112,6 +2122,7 @@ ${cardText}`),
           else enqueueScore(post);
         }
         await scoreChain;
+        applyHiddenTones();
       } finally {
         flushing = false;
         if (queue.length) schedule();
@@ -2121,16 +2132,31 @@ ${cardText}`),
       flush().catch(() => {
       });
     }, debounceMs);
+    const scheduleRepair = debounce(() => {
+      applyHiddenTones();
+    }, debounceMs);
     const MO = globalThis.MutationObserver;
     const mo = typeof MO === "function" ? new MO((records) => {
+      let repair = false;
       for (const record of records) {
+        if (record.type === "attributes") {
+          repair = true;
+          continue;
+        }
         for (const node of record.addedNodes || []) {
           if (node.nodeType === 1) enqueue(node);
         }
+        if (record.removedNodes?.length) repair = true;
       }
       if (queue.length) schedule();
+      if (repair) scheduleRepair();
     }) : null;
-    mo?.observe(doc.body, { childList: true, subtree: true });
+    mo?.observe(doc.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-fcb-collapsed"]
+    });
     const rescanSoon = debounce(() => {
       rescanTone();
     }, debounceMs);

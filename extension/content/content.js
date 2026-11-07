@@ -189,23 +189,28 @@ async function start(doc, options) {
       if (post.dataset?.fcbScored !== '1') continue;
       armTone(post);
     }
+    applyHiddenTones();
   }
 
-  function applyHiddenTones() {
-    for (const post of findPosts(doc.body || doc)) {
-      const id = post.dataset?.fcbPostId;
-      if (!id) continue;
-      syncPostCollapse(post, {
-        label: toneMemory.get(id),
-        hiddenTones: state.hiddenTones,
-        revealed: revealedPosts,
-        postId: id,
-        onShow(postId) {
-          revealedPosts.add(String(postId));
-          applyHiddenTones();
-        },
-      });
-    }
+  function collapsePost(post, visibleOnly = true) {
+    const id = post?.dataset?.fcbPostId;
+    if (!id) return;
+    if (visibleOnly && !roughlyInView(post)) return;
+    syncPostCollapse(post, {
+      label: toneMemory.get(id),
+      hiddenTones: state.hiddenTones,
+      revealed: revealedPosts,
+      postId: id,
+      onShow(postId) {
+        revealedPosts.add(String(postId));
+        applyHiddenTones();
+      },
+    });
+  }
+
+  function applyHiddenTones(options = {}) {
+    const visibleOnly = options.visibleOnly !== false;
+    for (const post of findPosts(doc.body || doc)) collapsePost(post, visibleOnly);
     reportHiddenCount();
   }
 
@@ -235,7 +240,7 @@ async function start(doc, options) {
       const prevHidden = (state.hiddenTones || []).join(',');
       state = normalizeState(next);
       if (state.toneEnabled !== was) refreshTone();
-      if ((state.hiddenTones || []).join(',') !== prevHidden) applyHiddenTones();
+      if ((state.hiddenTones || []).join(',') !== prevHidden) applyHiddenTones({ visibleOnly: false });
     }).catch(() => {});
   });
 
@@ -290,6 +295,7 @@ async function start(doc, options) {
       post.dataset.fcbPostId = String(snapshot.id);
       post.dataset.fcbScored = '1';
     }
+    collapsePost(post, false);
     armTone(post);
   }
 
@@ -356,6 +362,7 @@ async function start(doc, options) {
         else enqueueScore(post);
       }
       await scoreChain;
+      applyHiddenTones();
     } finally {
       flushing = false;
       if (queue.length) schedule();
@@ -365,19 +372,34 @@ async function start(doc, options) {
   const schedule = debounce(() => {
     flush().catch(() => {});
   }, debounceMs);
+  const scheduleRepair = debounce(() => {
+    applyHiddenTones();
+  }, debounceMs);
 
   const MO = globalThis.MutationObserver;
   const mo = typeof MO === 'function'
     ? new MO((records) => {
+      let repair = false;
       for (const record of records) {
+        if (record.type === 'attributes') {
+          repair = true;
+          continue;
+        }
         for (const node of record.addedNodes || []) {
           if (node.nodeType === 1) enqueue(node);
         }
+        if (record.removedNodes?.length) repair = true;
       }
       if (queue.length) schedule();
+      if (repair) scheduleRepair();
     })
     : null;
-  mo?.observe(doc.body, { childList: true, subtree: true });
+  mo?.observe(doc.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['data-fcb-collapsed'],
+  });
   const rescanSoon = debounce(() => {
     rescanTone();
   }, debounceMs);

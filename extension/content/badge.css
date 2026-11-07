@@ -142,7 +142,7 @@
 .fcb-tip.fcb-tip-portal .fcb-async { color: #a8a29e; margin-bottom: 0; }
 .fcb-tip.fcb-tip-portal .fcb-async { margin-top: 8px; }
 
-article.fcb-collapsed {
+article[data-fcb-collapsed="1"] {
   max-height: 28px !important;
   overflow: hidden !important;
 }

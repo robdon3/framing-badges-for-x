@@ -45,17 +45,23 @@ export function syncPostCollapse(article, { label, hiddenTones, revealed, postId
   const collapse = shouldCollapsePost({ label, hiddenTones, revealed, postId });
   const bar = hiddenBar(article);
   if (!collapse) {
-    bar?.remove();
-    article.classList?.remove('fcb-collapsed');
+    if (bar) bar.remove();
+    if (article.dataset?.fcbCollapsed) delete article.dataset.fcbCollapsed;
+    if (article.classList?.contains('fcb-collapsed')) article.classList.remove('fcb-collapsed');
     return false;
   }
   ensurePositioned(article);
-  article.classList.add('fcb-collapsed');
+  // data-fcb-collapsed survives X rewriting className on hover. The class does not.
+  if (article.dataset) {
+    if (article.dataset.fcbCollapsed !== '1') article.dataset.fcbCollapsed = '1';
+  } else if (article.getAttribute?.('data-fcb-collapsed') !== '1') {
+    article.setAttribute('data-fcb-collapsed', '1');
+  }
   const name = toneDisplayName(label);
   const text = `Hidden: ${name}`;
   if (bar) {
     const labelNode = [...bar.children].find((el) => el.classList?.contains('fcb-hidden-label'));
-    if (labelNode) labelNode.textContent = text;
+    if (labelNode && labelNode.textContent !== text) labelNode.textContent = text;
     return true;
   }
   const doc = article.ownerDocument;

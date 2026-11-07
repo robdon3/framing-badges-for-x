@@ -67,7 +67,7 @@ describe('tone', { concurrency: 1 }, () => {
   it('derives the stable unpacked extension id from the manifest key', () => {
     const manifest = JSON.parse(readFileSync(path.join(root, 'extension/manifest.json'), 'utf8'));
     assert.equal(extensionIdFromKey(manifest.key), EXPECTED_EXTENSION_ID);
-    assert.equal(manifest.version, '1.3.0');
+    assert.equal(manifest.version, '1.3.1');
   });
 
   it('frames native messages as a little-endian length plus JSON', () => {

@@ -56,7 +56,8 @@ describe('tone filter', () => {
     };
     assert.equal(syncPostCollapse(article, options), true);
     assert.equal(article.querySelector('.fcb-hidden-label').textContent, 'Hidden: Whining');
-    assert.equal(article.classList.contains('fcb-collapsed'), true);
+    assert.equal(article.getAttribute('data-fcb-collapsed'), '1');
+    assert.equal(article.matches('article[data-fcb-collapsed="1"]'), true);
     assert.equal(article.querySelector('.x-action').textContent, 'More');
     article.querySelector('.fcb-show').click();
     assert.equal(clicks(), 0);
@@ -85,7 +86,26 @@ describe('tone filter', () => {
       onShow() {},
     });
     assert.equal(article.querySelector('.fcb-hidden-bar'), null);
+    assert.equal(article.getAttribute('data-fcb-collapsed'), null);
     assert.equal(article.classList.contains('fcb-collapsed'), false);
+    assert.equal(article.querySelector('.x-action').textContent, 'More');
+  });
+
+  it('stays collapsed when X overwrites the class attribute', () => {
+    const { article, clicks } = articleWithAction();
+    syncPostCollapse(article, {
+      label: 'angry',
+      hiddenTones: ['angry'],
+      revealed: new Set(),
+      postId: 'post-3',
+      onShow() {},
+    });
+    article.className = 'css-hover-rewrite';
+    assert.equal(article.classList.contains('fcb-collapsed'), false);
+    assert.equal(article.getAttribute('data-fcb-collapsed'), '1');
+    assert.equal(article.matches('article[data-fcb-collapsed="1"]'), true);
+    assert.equal(article.querySelector('.fcb-hidden-label').textContent, 'Hidden: Angry');
+    assert.equal(clicks(), 0);
     assert.equal(article.querySelector('.x-action').textContent, 'More');
   });
 
@@ -210,5 +230,94 @@ describe('tone filter', () => {
     await new Promise((resolve) => setImmediate(resolve));
     assert.equal(document.querySelector('.fcb-hidden-bar'), null);
     assert.deepEqual(sent, ['42']);
+  });
+
+  it('re-collapses a re-rendered or recycled post that already has a label', async () => {
+    installObservers();
+    const { document } = parseHTML(`<html><body>
+      <article data-testid="tweet">
+        <div data-testid="tweetText">Here is the meeting agenda for Thursday.</div>
+        <div data-testid="User-Name"><span>@tone_user</span></div>
+        <a href="/tone_user/status/42"><time datetime="2026-11-07T12:00:00.000Z">now</time></a>
+        <button class="x-action">More</button>
+      </article>
+    </body></html>`);
+    const storage = createMemoryStorage({ toneEnabled: true, hiddenTones: ['whining'] });
+    const sent = [];
+    let clicks = 0;
+    document.querySelector('.x-action').addEventListener('click', () => {
+      clicks += 1;
+    });
+    await startFramingBadges(document, {
+      storage,
+      debounceMs: 0,
+      immediate: true,
+      now: () => NOW,
+      toneDelayMs: 0,
+      toneSend: async (request) => {
+        sent.push(request.id);
+        return { id: request.id, label: 'whining', ms: 4 };
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    const article = document.querySelector('article');
+    assert.equal(article.getAttribute('data-fcb-collapsed'), '1');
+    assert.equal(article.querySelector('.fcb-hidden-label').textContent, 'Hidden: Whining');
+    assert.deepEqual(sent, ['42']);
+
+    article.className = 'css-hover-rewrite';
+    assert.equal(article.classList.contains('fcb-collapsed'), false);
+    assert.equal(article.getAttribute('data-fcb-collapsed'), '1');
+    assert.equal(article.querySelector('.fcb-hidden-bar') != null, true);
+
+    const bar = article.querySelector('.fcb-hidden-bar');
+    bar.remove();
+    article.removeAttribute('data-fcb-collapsed');
+    globalThis.MutationObserver.latest.callback([
+      {
+        type: 'attributes',
+        attributeName: 'data-fcb-collapsed',
+        target: article,
+        addedNodes: [],
+        removedNodes: [],
+      },
+      {
+        type: 'childList',
+        target: article,
+        addedNodes: [],
+        removedNodes: [bar],
+      },
+    ]);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    assert.equal(article.getAttribute('data-fcb-collapsed'), '1');
+    assert.equal(article.querySelector('.fcb-hidden-label').textContent, 'Hidden: Whining');
+    assert.equal(clicks, 0);
+    assert.deepEqual(sent, ['42']);
+
+    const fresh = document.createElement('article');
+    fresh.setAttribute('data-testid', 'tweet');
+    fresh.innerHTML = `<div data-testid="tweetText">Here is the meeting agenda for Thursday.</div>
+      <div data-testid="User-Name"><span>@tone_user</span></div>
+      <a href="/tone_user/status/42"><time datetime="2026-11-07T12:00:00.000Z">now</time></a>
+      <button class="x-action">More</button>`;
+    fresh.querySelector('.x-action').addEventListener('click', () => {
+      clicks += 1;
+    });
+    article.remove();
+    document.body.append(fresh);
+    globalThis.MutationObserver.latest.callback([
+      { type: 'childList', target: document.body, addedNodes: [fresh], removedNodes: [article] },
+    ]);
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    assert.equal(fresh.getAttribute('data-fcb-collapsed'), '1');
+    assert.equal(fresh.querySelector('.fcb-hidden-label').textContent, 'Hidden: Whining');
+    assert.equal(fresh.querySelector('.x-action').textContent, 'More');
+    assert.equal(clicks, 0);
+    assert.deepEqual(sent, ['42']);
+
+    fresh.querySelector('.fcb-show').click();
+    assert.equal(fresh.querySelector('.fcb-hidden-bar'), null);
+    assert.equal(fresh.getAttribute('data-fcb-collapsed'), null);
+    assert.equal(clicks, 0);
   });
 });

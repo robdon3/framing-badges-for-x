@@ -1,7 +1,7 @@
 {
   "name": "x-framing-badges",
   "private": true,
-  "version": "1.3.0",
+  "version": "1.3.1",
   "type": "module",
   "description": "Unpacked Manifest V3 extension that badges how an X post is framed. Rules only. It scores framing, not truth.",
   "scripts": {
